@@ -1,0 +1,8 @@
+{
+  "name": "Yes Duty Free - Global Duty Free Shopping",
+  "description": "A premium platform inspired by Wadiz layout for global duty-free product delivery and live shopping experiences.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
