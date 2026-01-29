@@ -1,17 +1,27 @@
-
 import React, { useState } from 'react';
 
 interface LoginPageProps {
   onSwitchToSignup: () => void;
   onLoginSuccess: () => void;
+  onSignIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess, onSignIn }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+    const { error: err } = await onSignIn(email, password);
+    setLoading(false);
+    if (err) {
+      setError(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 올바르지 않습니다.' : err.message);
+      return;
+    }
     onLoginSuccess();
   };
 
@@ -45,6 +55,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess 
                 className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:bg-white focus:border-red-500/30 text-[15px] font-medium transition-all"
               />
             </div>
+            {error && <p className="text-sm font-bold text-red-600">{error}</p>}
             
             <div className="flex items-center justify-between text-[12px] text-gray-400 font-bold py-1">
               <label className="flex items-center gap-2 cursor-pointer group">
@@ -59,9 +70,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess 
 
             <button
               type="submit"
-              className="w-full py-4.5 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-600/10 active:scale-95 mt-6 py-4"
+              disabled={loading}
+              className="w-full py-4.5 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-600/10 active:scale-95 mt-6 py-4 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              로그인하기
+              {loading ? '로그인 중...' : '로그인하기'}
             </button>
           </form>
 

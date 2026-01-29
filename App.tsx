@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Layout from './components/Layout';
 import HeroBanner from './components/HeroBanner';
@@ -8,8 +7,25 @@ import AdminPanel from './components/AdminPanel';
 import ProductDetail from './components/ProductDetail';
 import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
-import { MOCK_PRODUCTS, MOCK_LIVES } from './constants';
-import { Product, CartItem, Coupon, Order, LiveStream, Category } from './types';
+import CartPage from './components/CartPage';
+import ShippingAddressPage from './components/ShippingAddressPage';
+import CheckoutPage from './components/CheckoutPage';
+import OrderCompletePage from './components/OrderCompletePage';
+import TierBenefitsModal from './components/TierBenefitsModal';
+import OrderDetailModal from './components/OrderDetailModal';
+import ConfirmModal from './components/ConfirmModal';
+import { MOCK_LIVES } from './constants';
+import { useProducts } from './lib/hooks/useProducts';
+import { useCategories } from './lib/hooks/useCategories';
+import { useAuth } from './lib/hooks/useAuth';
+import { useCart } from './lib/hooks/useCart';
+import { useShippingAddresses } from './lib/hooks/useShippingAddresses';
+import { useProfile } from './lib/hooks/useProfile';
+import { useOrders, useOrderDetail } from './lib/hooks/useOrders';
+import { useWishlist, useToggleWishlist } from './lib/hooks/useWishlist';
+import { createOrder } from './lib/api/orders';
+import { useQueryClient } from '@tanstack/react-query';
+import { Product, CartItem, Coupon, Order, LiveStream } from './types';
 
 const App: React.FC = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -23,12 +39,95 @@ const App: React.FC = () => {
   
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQuantity, setCheckoutQuantity] = useState(1);
+  const [orderCompleteNumber, setOrderCompleteNumber] = useState<string | null>(null);
+  const [showTierBenefitsModal, setShowTierBenefitsModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [confirmWishlistRemove, setConfirmWishlistRemove] = useState<Product | null>(null);
 
   const [email, setEmail] = useState('');
+  const queryClient = useQueryClient();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const products = MOCK_PRODUCTS as unknown as Product[];
+  const { products, isLoading: productsLoading } = useProducts();
+  const { categories } = useCategories();
+  const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
+  const {
+    cartId,
+    items: cartItems,
+    isLoading: cartLoading,
+    addToCart,
+    updateQuantity,
+    removeItem,
+    refetch: refetchCart,
+    itemCount: cartItemCount,
+  } = useCart(user?.id);
+  const {
+    addresses: shippingAddresses,
+    defaultAddress,
+    isLoading: addressesLoading,
+    create: createAddress,
+    update: updateAddress,
+    remove: removeAddress,
+    setDefault: setDefaultAddress,
+  } = useShippingAddresses(user?.id);
+  const { profile } = useProfile(user?.id);
+  const { orders: myOrders, isLoading: ordersLoading, refetch: refetchOrders } = useOrders(user?.id);
+  const { order: selectedOrderDetail, isLoading: orderDetailLoading } = useOrderDetail(selectedOrderId, user?.id);
+  const { wishlist } = useWishlist(user?.id);
+  const { toggle: toggleWishlist, isToggling: wishlistToggling } = useToggleWishlist(user?.id);
+  const categoryNames = categories.map((c) => c.name);
+
+  const wishlistPropsFor = (p: Product) =>
+    user
+      ? {
+          isInWishlist: wishlist.some((w) => w.id === p.id),
+          onToggle: (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (wishlist.some((w) => w.id === p.id)) {
+              setConfirmWishlistRemove(p);
+            } else {
+              toggleWishlist(p.id);
+            }
+          },
+          isToggling: wishlistToggling,
+        }
+      : undefined;
+
+  const handleConfirmWishlistRemove = async () => {
+    if (!confirmWishlistRemove) return;
+    await toggleWishlist(confirmWishlistRemove.id);
+    setConfirmWishlistRemove(null);
+  };
+
+  const handleCreateOrder = async (shippingAddressId: string, cartItemIds?: string[], usedPoints?: number) => {
+    if (!user?.id || !cartId) throw new Error('로그인 후 장바구니에서 주문해 주세요.');
+    const order = await createOrder(user.id, { shippingAddressId, cartId, cartItemIds, paymentMethod: 'card', usedPoints });
+    await queryClient.invalidateQueries({ queryKey: ['cart'] });
+    await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    await queryClient.invalidateQueries({ queryKey: ['orders'] });
+    setOrderCompleteNumber(order.order_number);
+  };
+
+  const handleImmediatePurchase = async (product: Product, quantity: number, options?: Record<string, string>) => {
+    if (!user) {
+      navigateToPage('login');
+      return;
+    }
+    try {
+      await addToCart(product, quantity, options);
+      await queryClient.refetchQueries({ queryKey: ['cart'] });
+      navigateToPage('cart');
+    } catch (err) {
+      console.error(err);
+      alert('장바구니에 담기에 실패했습니다.');
+    }
+  };
+
+  const formatOrderDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  };
   const liveStreams = MOCK_LIVES as LiveStream[];
   
   const navigateToPage = (page: string, category?: string, subCategory?: string) => {
@@ -52,6 +151,20 @@ const App: React.FC = () => {
     setSelectedProduct(product);
     setCurrentPage('detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddToCart = async (product: Product, quantity: number, selectedOptions?: Record<string, string>) => {
+    if (!user) {
+      navigateToPage('login');
+      return;
+    }
+    try {
+      await addToCart(product, quantity, selectedOptions);
+      navigateToPage('cart');
+    } catch (err) {
+      console.error(err);
+      alert('장바구니 담기에 실패했습니다.');
+    }
   };
 
   const renderHome = () => (
@@ -87,13 +200,21 @@ const App: React.FC = () => {
           <h2 className="text-2xl font-black text-gray-900 tracking-tighter">실시간 인기 면세템</h2>
           <button onClick={() => navigateToPage('best')} className="text-xs font-black text-gray-400 hover:text-red-600">View All &gt;</button>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-          {products.map(p => (
-            <div key={p.id} onClick={() => handleProductClick(p)}>
-              <ProductCard product={p} />
-            </div>
-          ))}
-        </div>
+        {productsLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="aspect-[4/5] rounded-xl bg-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            {products.map(p => (
+              <div key={p.id} onClick={() => handleProductClick(p)}>
+                <ProductCard product={p} wishlist={wishlistPropsFor(p)} />
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -101,7 +222,19 @@ const App: React.FC = () => {
   if (isAdminLoggedIn) return <AdminPanel onClose={() => setIsAdminLoggedIn(false)} />;
 
   return (
-    <Layout onAdminClick={() => setShowAdminLogin(true)} setCurrentPage={navigateToPage} currentPage={currentPage}>
+    <Layout
+      onAdminClick={() => setShowAdminLogin(true)}
+      setCurrentPage={navigateToPage}
+      currentPage={currentPage}
+      products={products}
+      productsLoading={productsLoading}
+      activeCategory={activeCategory}
+      user={user}
+      profile={profile ?? undefined}
+      onLogout={signOut}
+      authLoading={authLoading}
+      cartItemCount={cartItemCount}
+    >
       {currentPage === 'home' && renderHome()}
       {currentPage === 'live' && (
         <div className="h-[calc(100vh-64px)] lg:h-[calc(100vh-80px)] overflow-y-scroll snap-y snap-mandatory bg-black scrollbar-hide">
@@ -154,8 +287,7 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-20">
           <h2 className="text-3xl font-black mb-12">전체 카테고리</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {/* Added explicit string cast for navigateToPage to match its signature */}
-            {Object.values(Category).map(cat => (
+            {categoryNames.map(cat => (
               <div key={cat} onClick={() => navigateToPage('category', cat as string)} className="p-10 bg-white border border-gray-100 rounded-[2rem] flex flex-col items-center gap-4 cursor-pointer hover:border-red-500 hover:shadow-xl transition-all group">
                 <span className="text-4xl group-hover:scale-110 transition-transform">📦</span>
                 <span className="font-black text-lg">{cat}</span>
@@ -178,7 +310,7 @@ const App: React.FC = () => {
                 .filter(p => p.category === activeCategory)
                 .map(p => (
                   <div key={p.id} onClick={() => handleProductClick(p)}>
-                    <ProductCard product={p} />
+                    <ProductCard product={p} wishlist={wishlistPropsFor(p)} />
                   </div>
               ))}
             </div>
@@ -188,26 +320,189 @@ const App: React.FC = () => {
       {currentPage === 'mypage' && (
         <div className="max-w-7xl mx-auto px-4 py-20">
           <div className="flex items-center gap-10 mb-16 border-b border-gray-100 pb-16">
-            <div className="w-24 h-24 rounded-full bg-gray-900 flex items-center justify-center text-white text-3xl font-black shadow-xl">Y</div>
+            <div className="w-24 h-24 rounded-full bg-gray-900 flex items-center justify-center text-white text-3xl font-black shadow-xl">
+              {(profile?.name ?? user?.email ?? 'Y').charAt(0).toUpperCase()}
+            </div>
             <div>
-              <h2 className="text-4xl font-black text-gray-900 tracking-tighter">홍길동님 <span className="text-red-600">Premium</span></h2>
-              <p className="text-gray-400 font-bold mt-2">글로벌 배송 우선권 및 단독 쿠폰 혜택 적용 중</p>
+              <h2 className="text-4xl font-black text-gray-900 tracking-tighter">
+                {profile?.name ?? user?.email ?? '회원'}님{' '}
+                <span className="text-red-600">{profile?.membership_tier === 'vip' ? 'VIP' : profile?.membership_tier === 'premium' ? 'Premium' : 'Basic'}</span>
+              </h2>
+              <p className="text-gray-400 font-bold mt-2">
+                {profile?.membership_tier === 'vip'
+                  ? '무료배송 · 3% 적립 · 전담 CS'
+                  : profile?.membership_tier === 'premium'
+                    ? '무료배송 · 2% 적립'
+                    : '1% 적립 (월 20만원 이상 구매 시 Premium)'}
+              </p>
+              {profile != null && (
+                <p className="text-sm font-bold text-gray-500 mt-1">적립금 {profile.points.toLocaleString()}P</p>
+              )}
             </div>
           </div>
-          <div className="bg-white rounded-[2rem] border border-gray-100 p-20 flex flex-col items-center justify-center gap-4 text-center">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-200">📦</div>
-            <p className="text-gray-400 font-bold">최근 주문 내역이 없습니다.</p>
+          <div className="flex flex-wrap gap-4 mb-8">
+            <button
+              type="button"
+              onClick={() => navigateToPage('addresses')}
+              className="px-6 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 hover:border-red-200 hover:text-red-600 transition-all"
+            >
+              📍 배송지 관리
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTierBenefitsModal(true)}
+              className="px-6 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 hover:border-amber-200 hover:text-amber-700 transition-all"
+            >
+              🏆 등급별 혜택 보기
+            </button>
+          </div>
+          {user && (
+            <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden mb-8">
+              <h3 className="px-6 py-4 border-b border-gray-100 text-lg font-black text-gray-900">찜한 상품</h3>
+              {wishlist.length === 0 ? (
+                <div className="p-12 flex flex-col items-center justify-center gap-4 text-center">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 text-2xl">❤️</div>
+                  <p className="text-gray-400 font-bold">찜한 상품이 없습니다.</p>
+                  <button type="button" onClick={() => navigateToPage('home')} className="text-sm font-bold text-red-600 hover:underline">쇼핑하러 가기</button>
+                </div>
+              ) : (
+                <div className="p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {wishlist.map((p) => (
+                      <div key={p.id} onClick={() => handleProductClick(p)}>
+                        <ProductCard product={p} wishlist={wishlistPropsFor(p)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden">
+            <h3 className="px-6 py-4 border-b border-gray-100 text-lg font-black text-gray-900">주문 내역</h3>
+            {ordersLoading ? (
+              <div className="p-12 flex justify-center">
+                <div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            ) : myOrders.length === 0 ? (
+              <div className="p-20 flex flex-col items-center justify-center gap-4 text-center">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-200">📦</div>
+                <p className="text-gray-400 font-bold">최근 주문 내역이 없습니다.</p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {myOrders.map((o) => (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderId(o.id)}
+                      className="w-full px-6 py-4 flex flex-wrap items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900">{o.order_number}</p>
+                        <p className="text-sm text-gray-500 mt-0.5">{formatOrderDate(o.created_at)} · {o.status}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-red-600">{o.total_amount.toLocaleString()}원</p>
+                        <p className="text-xs text-gray-400 mt-0.5">상세 보기 →</p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
-      {currentPage === 'login' && <LoginPage onSwitchToSignup={() => navigateToPage('signup')} onLoginSuccess={() => navigateToPage('home')} />}
-      {currentPage === 'signup' && <SignupPage onSwitchToLogin={() => navigateToPage('login')} onSignupSuccess={() => navigateToPage('login')} />}
+      {showTierBenefitsModal && <TierBenefitsModal onClose={() => setShowTierBenefitsModal(false)} />}
+      <ConfirmModal
+        open={!!confirmWishlistRemove}
+        title="찜 해제"
+        message="정말 삭제하시겠습니까?"
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        onConfirm={handleConfirmWishlistRemove}
+        onCancel={() => setConfirmWishlistRemove(null)}
+        loading={wishlistToggling}
+      />
+      {selectedOrderId && (
+        <OrderDetailModal
+          key={selectedOrderId}
+          orderId={selectedOrderId}
+          order={selectedOrderDetail ?? null}
+          isLoading={orderDetailLoading}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      )}
+      {currentPage === 'addresses' && (
+        <ShippingAddressPage
+          user={user ?? null}
+          addresses={shippingAddresses}
+          isLoading={addressesLoading}
+          onCreate={createAddress}
+          onUpdate={updateAddress}
+          onDelete={removeAddress}
+          onSetDefault={setDefaultAddress}
+          onNavigateToLogin={() => navigateToPage('login')}
+          onNavigateToPage={navigateToPage}
+        />
+      )}
+      {currentPage === 'login' && (
+        <LoginPage
+          onSwitchToSignup={() => navigateToPage('signup')}
+          onLoginSuccess={() => navigateToPage('home')}
+          onSignIn={signIn}
+        />
+      )}
+      {currentPage === 'signup' && (
+        <SignupPage
+          onSwitchToLogin={() => navigateToPage('login')}
+          onSignupSuccess={() => navigateToPage('login')}
+          onSignUp={signUp}
+        />
+      )}
       {currentPage === 'detail' && selectedProduct && (
         <ProductDetail 
-          product={selectedProduct} 
+          product={selectedProduct}
+          products={products}
           onBack={() => navigateToPage('home')} 
-          onAddToCart={() => alert('장바구니 추가!')} 
-          onImmediatePurchase={(p, q) => { setCheckoutProduct(p); setCheckoutQuantity(q); }} 
+          onAddToCart={handleAddToCart} 
+          onImmediatePurchase={handleImmediatePurchase}
+          onProductClick={handleProductClick}
+        />
+      )}
+      {currentPage === 'cart' && (
+        <CartPage
+          user={user ?? null}
+          items={cartItems}
+          isLoading={cartLoading}
+          onUpdateQuantity={updateQuantity}
+          onRemoveItem={removeItem}
+          onNavigateToLogin={() => navigateToPage('login')}
+          onNavigateToPage={(page) => navigateToPage(page)}
+          onProductClick={handleProductClick}
+        />
+      )}
+      {currentPage === 'checkout' && (
+        <CheckoutPage
+          user={user ?? null}
+          profile={profile ?? null}
+          items={cartItems}
+          cartId={cartId}
+          addresses={shippingAddresses}
+          defaultAddress={defaultAddress ?? null}
+          onCreateOrder={handleCreateOrder}
+          onNavigateToLogin={() => navigateToPage('login')}
+          onNavigateToPage={(page) => navigateToPage(page)}
+        />
+      )}
+      {currentPage === 'order_complete' && (
+        <OrderCompletePage
+          orderNumber={orderCompleteNumber}
+          onNavigateToPage={(page) => {
+            setOrderCompleteNumber(null);
+            navigateToPage(page);
+          }}
         />
       )}
       {currentPage === 'deals' && (
@@ -217,7 +512,7 @@ const App: React.FC = () => {
            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               {products.map(p => (
                 <div key={p.id} onClick={() => handleProductClick(p)}>
-                  <ProductCard product={p} />
+                  <ProductCard product={p} wishlist={wishlistPropsFor(p)} />
                 </div>
               ))}
            </div>
@@ -229,7 +524,7 @@ const App: React.FC = () => {
            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {products.map(p => (
                 <div key={p.id} onClick={() => handleProductClick(p)}>
-                  <ProductCard product={p} />
+                  <ProductCard product={p} wishlist={wishlistPropsFor(p)} />
                 </div>
               ))}
            </div>

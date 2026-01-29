@@ -1,40 +1,66 @@
-
 import React, { useState } from 'react';
 import { Product } from '../types';
-import { COLORS, MOCK_PRODUCTS } from '../constants';
+import { useProduct } from '../lib/hooks/useProducts';
+import { useAuth } from '../lib/hooks/useAuth';
+import { useWishlist, useWishlistCheck, useToggleWishlist } from '../lib/hooks/useWishlist';
 import ProductCard from './ProductCard';
+import ConfirmModal from './ConfirmModal';
 
 interface ProductDetailProps {
   product: Product;
+  products: Product[];
   onBack: () => void;
   onAddToCart: (product: Product, quantity: number, options?: Record<string, string>) => void;
   onImmediatePurchase: (product: Product, quantity: number, options?: Record<string, string>) => void;
+  onProductClick?: (product: Product) => void;
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, onImmediatePurchase }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack, onAddToCart, onImmediatePurchase, onProductClick }) => {
   const [activeTab, setActiveTab] = useState('상품설명');
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [confirmWishlistRemove, setConfirmWishlistRemove] = useState<Product | null>(null);
+
+  const { user } = useAuth();
+  const { product: fullProduct, isLoading: productLoading } = useProduct(product.id);
+  const displayProduct = fullProduct ?? product;
+  const { isInWishlist } = useWishlistCheck(user?.id, displayProduct.id);
+  const { toggle: toggleWishlist, isToggling: wishlistToggling } = useToggleWishlist(user?.id);
+  const { wishlist } = useWishlist(user?.id);
+  const getWishlistProps = (p: Product) => ({
+    isInWishlist: wishlist.some((w) => w.id === p.id),
+    onToggle: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (wishlist.some((w) => w.id === p.id)) setConfirmWishlistRemove(p);
+      else toggleWishlist(p.id);
+    },
+    isToggling: wishlistToggling,
+  });
+
+  const handleConfirmWishlistRemove = async () => {
+    if (!confirmWishlistRemove) return;
+    await toggleWishlist(confirmWishlistRemove.id);
+    setConfirmWishlistRemove(null);
+  };
 
   const handleOptionChange = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
   };
 
-  // Related products logic
-  const relatedProducts = (MOCK_PRODUCTS as unknown as Product[]).filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
-  const bestProducts = (MOCK_PRODUCTS as unknown as Product[]).slice(0, 4);
+  const relatedProducts = products.filter(p => p.category === displayProduct.category && p.id !== displayProduct.id).slice(0, 4);
+  const bestProducts = products.slice(0, 4);
 
   return (
     <div className="bg-white min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-12 gap-12">
         <div className="md:col-span-7 space-y-4">
           <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-            <img src={product.imageUrl} className="w-full h-full object-cover" alt={product.name} />
+            <img src={displayProduct.imageUrl} className="w-full h-full object-cover" alt={displayProduct.name} />
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="aspect-square rounded-lg bg-gray-100 overflow-hidden cursor-pointer hover:ring-2 ring-red-500 transition-all">
-                <img src={`https://picsum.photos/seed/${product.id + i}/200/200`} className="w-full h-full object-cover" />
+                <img src={`https://picsum.photos/seed/${displayProduct.id + i}/200/200`} className="w-full h-full object-cover" alt="" />
               </div>
             ))}
           </div>
@@ -42,20 +68,39 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
         <div className="md:col-span-5 flex flex-col gap-6">
           <div className="flex items-center gap-2 text-xs font-bold text-red-500 uppercase tracking-widest">
-            <span>{product.brand}</span>
+            <span>{displayProduct.brand}</span>
             <span className="text-gray-200">|</span>
-            <span className="text-gray-400">{product.category}</span>
+            <span className="text-gray-400">{displayProduct.category}</span>
           </div>
           
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
-            {product.name}
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight flex-1">
+              {displayProduct.name}
+            </h1>
+            {user ? (
+              <button
+                type="button"
+                aria-label={isInWishlist ? '찜 해제' : '찜하기'}
+                onClick={() => (isInWishlist ? setConfirmWishlistRemove(displayProduct) : toggleWishlist(displayProduct.id))}
+                disabled={wishlistToggling}
+                className={`shrink-0 p-2.5 rounded-full border-2 transition-colors ${isInWishlist ? 'bg-red-50 border-red-200 text-red-600' : 'border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}
+              >
+                {wishlistToggling ? (
+                  <span className="w-6 h-6 block rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+                ) : (
+                  <svg className="w-6 h-6" fill={isInWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                )}
+              </button>
+            ) : null}
+          </div>
 
           <div className="flex flex-col gap-1 py-4 border-y border-gray-50">
             <div className="flex items-center gap-2">
-              <span className="text-3xl font-bold text-red-600">{product.discount}%</span>
-              <span className="text-3xl font-bold text-gray-900">{product.price.toLocaleString()}원</span>
-              <span className="text-gray-400 line-through text-sm ml-2">{product.originalPrice.toLocaleString()}원</span>
+              <span className="text-3xl font-bold text-red-600">{displayProduct.discount}%</span>
+              <span className="text-3xl font-bold text-gray-900">{displayProduct.price.toLocaleString()}원</span>
+              <span className="text-gray-400 line-through text-sm ml-2">{displayProduct.originalPrice.toLocaleString()}원</span>
             </div>
             <p className="text-xs text-blue-500 font-bold mt-1">
                면세 혜택가 적용 완료 (해외배송 전용)
@@ -63,7 +108,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           </div>
 
           {/* Options Selection */}
-          {product.options && product.options.map((opt) => (
+          {displayProduct.options && displayProduct.options.map((opt) => (
             <div key={opt.name} className="space-y-2">
               <label className="text-sm font-black text-gray-900">{opt.name}</label>
               <div className="grid grid-cols-2 gap-2">
@@ -103,19 +148,19 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
              </div>
              <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
                 <span className="text-sm font-bold text-gray-900">총 결제 금액</span>
-                <span className="text-xl font-bold text-red-600">{(product.price * quantity).toLocaleString()}원</span>
+                <span className="text-xl font-bold text-red-600">{(displayProduct.price * quantity).toLocaleString()}원</span>
              </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <button 
-              onClick={() => onAddToCart(product, quantity, selectedOptions)}
+              onClick={() => onAddToCart(displayProduct, quantity, selectedOptions)}
               className="flex-grow py-4 rounded-xl border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors"
             >
               장바구니 담기
             </button>
             <button 
-              onClick={() => onImmediatePurchase(product, quantity, selectedOptions)}
+              onClick={() => onImmediatePurchase(displayProduct, quantity, selectedOptions)}
               className="flex-grow py-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all"
             >
               즉시 구매하기
@@ -143,11 +188,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           <div className="text-center space-y-6">
              <h2 className="text-3xl font-bold text-gray-900">당신의 피부를 위한 최고의 선택</h2>
              <p className="text-lg text-gray-600 leading-relaxed">
-               전세계 면세점에서 가장 사랑받는 {product.brand}의 시그니처 아이템입니다.<br/>
+               전세계 면세점에서 가장 사랑받는 {displayProduct.brand}의 시그니처 아이템입니다.<br/>
                현지 매장과 동일한 품질을 면세 가격 그대로 만나보세요.
              </p>
              <div className="aspect-[4/5] bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
-                <img src={`https://picsum.photos/seed/${product.id}detail/800/1000`} className="w-full h-full object-cover" />
+                <img src={`https://picsum.photos/seed/${displayProduct.id}detail/800/1000`} className="w-full h-full object-cover" alt="" />
              </div>
           </div>
           
@@ -164,11 +209,24 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {relatedProducts.length > 0 ? relatedProducts.map((p, idx) => (
-              <ProductCard key={`related-${idx}`} product={p} />
+              <div key={`related-${p.id}`} onClick={() => onProductClick?.(p)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onProductClick?.(p)}>
+                <ProductCard product={p} wishlist={user ? getWishlistProps(p) : undefined} />
+              </div>
             )) : <p className="text-gray-300">추천 상품이 없습니다.</p>}
           </div>
         </section>
       </div>
+
+      <ConfirmModal
+        open={!!confirmWishlistRemove}
+        title="찜 해제"
+        message="정말 삭제하시겠습니까?"
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        onConfirm={handleConfirmWishlistRemove}
+        onCancel={() => setConfirmWishlistRemove(null)}
+        loading={wishlistToggling}
+      />
     </div>
   );
 };

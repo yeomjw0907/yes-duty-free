@@ -1,27 +1,41 @@
-
 import React, { useState, useEffect } from 'react';
-import { LOGO_SVG, MOCK_PRODUCTS } from '../constants';
-import { Category } from '../types';
+import { LOGO_SVG } from '../constants';
+import { useCategories } from '../lib/hooks/useCategories';
+import type { Product } from '../types';
+import type { User } from '@supabase/supabase-js';
+import type { UserProfile } from '../lib/api/users';
 
 interface LayoutProps {
   children: React.ReactNode;
   onAdminClick: () => void;
   setCurrentPage: (page: string, category?: string, subCategory?: string) => void;
   currentPage: string;
+  products: Product[];
+  productsLoading?: boolean;
+  activeCategory?: string;
+  user?: User | null;
+  profile?: UserProfile | null;
+  onLogout?: () => Promise<void>;
+  authLoading?: boolean;
+  cartItemCount?: number;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, onAdminClick, setCurrentPage, currentPage }) => {
+const tierLabel = (tier: string) => (tier === 'vip' ? 'VIP' : tier === 'premium' ? 'Premium' : 'Basic');
+
+const Layout: React.FC<LayoutProps> = ({ children, onAdminClick, setCurrentPage, currentPage, products, productsLoading, activeCategory, user, profile, onLogout, authLoading, cartItemCount = 0 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const isLiveMode = currentPage === 'live';
 
-  const categories = Object.values(Category);
+  const { categories } = useCategories();
+  const categoryNames = categories.map((c) => c.name);
 
   const bottomNavItems = [
     { id: 'home', label: '홈', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /> },
     { id: 'all_categories', label: '카테고리', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /> },
     { id: 'live', label: '라이브', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /> },
     { id: 'deals', label: '특가', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /> },
+    { id: 'cart', label: '장바구니', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 11-8 0v4M5 9h14l1 12H4L5 9z" /> },
     { id: 'mypage', label: 'MY', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /> }
   ];
 
@@ -78,7 +92,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdminClick, setCurrentPage,
               <div className="lg:col-span-8">
                 <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest italic mb-8">Real-time Popular</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-                  {MOCK_PRODUCTS.slice(0, 4).map((product) => (
+                  {(productsLoading ? [] : products.slice(0, 4)).map((product) => (
                     <div 
                       key={product.id} 
                       className="group cursor-pointer flex flex-col gap-4"
@@ -130,15 +144,45 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdminClick, setCurrentPage,
             
             <div className="flex items-center gap-4">
               <button 
+                onClick={() => setCurrentPage('cart')}
+                className={`relative p-2.5 rounded-full transition-all ${isLiveMode ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
+                aria-label="장바구니"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 11-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-600 text-white text-[10px] font-black rounded-full">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
+              </button>
+              <button 
                 onClick={() => setIsSearchOpen(true)}
                 className={`p-2.5 rounded-full transition-all ${isLiveMode ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               </button>
               <div className="hidden lg:flex items-center gap-8">
-                <button onClick={() => setCurrentPage('mypage')} className={`text-xs font-black tracking-widest uppercase ${isLiveMode ? 'text-white/40 hover:text-white' : 'text-gray-300 hover:text-gray-900'}`}>My Profile</button>
+                <button onClick={() => setCurrentPage('mypage')} className={`flex items-center gap-2 text-xs font-black tracking-widest uppercase ${isLiveMode ? 'text-white/40 hover:text-white' : 'text-gray-300 hover:text-gray-900'}`}>
+                  My Profile
+                  {user && profile && (
+                    <span className={`px-2 py-0.5 rounded text-[10px] ${profile.membership_tier === 'vip' ? 'bg-amber-100 text-amber-800' : profile.membership_tier === 'premium' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                      {tierLabel(profile.membership_tier)}
+                    </span>
+                  )}
+                </button>
                 <button onClick={onAdminClick} className={`text-xs font-black tracking-widest uppercase ${isLiveMode ? 'text-white/20 hover:text-white' : 'text-gray-100 hover:text-gray-900'}`}>Admin</button>
-                <button onClick={() => setCurrentPage('login')} className={`px-8 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white text-black hover:bg-red-600 hover:text-white' : 'bg-gray-900 text-white hover:bg-red-600'}`}>LOGIN</button>
+                {!authLoading && (
+                  user ? (
+                    <button
+                      onClick={() => onLogout?.().then(() => setCurrentPage('home'))}
+                      className={`px-8 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white/20 text-white hover:bg-red-600 border border-white/30' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 border border-gray-200'}`}
+                    >
+                      로그아웃
+                    </button>
+                  ) : (
+                    <button onClick={() => setCurrentPage('login')} className={`px-8 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white text-black hover:bg-red-600 hover:text-white' : 'bg-gray-900 text-white hover:bg-red-600'}`}>LOGIN</button>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -152,11 +196,11 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdminClick, setCurrentPage,
               >
                 전체보기
               </button>
-              {categories.map(cat => (
+              {categoryNames.map(cat => (
                 <button 
                   key={cat} 
                   onClick={() => setCurrentPage('category', cat)}
-                  className={`text-[13px] font-bold whitespace-nowrap transition-colors ${currentPage === 'category' && children?.props?.activeCategory === cat ? 'text-red-600' : 'text-gray-500 hover:text-gray-900'}`}
+                  className={`text-[13px] font-bold whitespace-nowrap transition-colors ${currentPage === 'category' && activeCategory === cat ? 'text-red-600' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   {cat}
                 </button>

@@ -69,3 +69,21 @@ export interface LiveStream {
   isLive: boolean;
   startTime?: string;
 }
+
+/** 해외 배송지 (Address Line 1 = 거리·건물, Line 2 = 호실·층·Apt - 국내 기본/상세 주소와 유사) */
+export interface ShippingAddress {
+  id: string;
+  user_id: string;
+  recipient_name: string;
+  phone: string;
+  country: string;
+  postal_code?: string;
+  state_province?: string;
+  city: string;
+  address_line1: string;
+  address_line2?: string;
+  is_default: boolean;
+  delivery_memo?: string;
+  created_at?: string;
+  updated_at?: string;
+}
