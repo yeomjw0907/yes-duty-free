@@ -1,10 +1,12 @@
-
 import React from 'react';
-import { MOCK_LIVES, COLORS } from '../constants';
+import { MOCK_LIVES } from '../constants';
 import { LiveStream } from '../types';
 
-const LiveSection: React.FC = () => {
-  // Use typed data from MOCK_LIVES
+interface LiveSectionProps {
+  onNavigateToLive?: (liveIndex?: number) => void;
+}
+
+const LiveSection: React.FC<LiveSectionProps> = ({ onNavigateToLive }) => {
   const liveStreams = MOCK_LIVES as LiveStream[];
 
   return (
@@ -21,12 +23,25 @@ const LiveSection: React.FC = () => {
             </h2>
             <p className="text-sm text-gray-600 mt-2">전문 쇼호스트가 전하는 생생한 면세 혜택</p>
           </div>
-          <button className="text-sm font-bold text-gray-400 hover:text-red-500 transition-colors">실시간 방송 더보기 &gt;</button>
+          <button
+            type="button"
+            onClick={() => onNavigateToLive?.()}
+            className="text-sm font-bold text-gray-400 hover:text-red-500 transition-colors"
+          >
+            실시간 방송 더보기 &gt;
+          </button>
         </div>
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {liveStreams.concat(liveStreams[0]).map((live, idx) => (
-            <div key={live.id + idx} className="relative group cursor-pointer flex flex-col gap-3">
+            <div
+              key={live.id + idx}
+              role="button"
+              tabIndex={0}
+              onClick={() => onNavigateToLive?.(idx)}
+              onKeyDown={(e) => e.key === 'Enter' && onNavigateToLive?.(idx)}
+              className="relative group cursor-pointer flex flex-col gap-3"
+            >
               <div className="aspect-[9/16] relative overflow-hidden rounded-2xl shadow-lg bg-gray-100">
                 <img 
                   src={live.thumbnail} 
@@ -61,7 +76,7 @@ const LiveSection: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 pointer-events-none">
                   <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center border border-white/50">
                     <svg className="w-6 h-6 text-white fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                   </div>

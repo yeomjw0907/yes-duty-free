@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import type { Product } from '../../types';
 
 interface WishlistRow {
@@ -36,7 +36,7 @@ function mapToProduct(p: WishlistRow['products']): Product | null {
 }
 
 export async function listWishlist(userId: string): Promise<Product[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('wishlists')
     .select(`
       id, user_id, product_id, created_at,
@@ -55,7 +55,7 @@ export async function listWishlist(userId: string): Promise<Product[]> {
 }
 
 export async function isInWishlist(userId: string, productId: string): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('wishlists')
     .select('id')
     .eq('user_id', userId)
@@ -67,7 +67,7 @@ export async function isInWishlist(userId: string, productId: string): Promise<b
 }
 
 export async function addWishlist(userId: string, productId: string): Promise<void> {
-  const { error } = await supabase.from('wishlists').insert({ user_id: userId, product_id: productId });
+  const { error } = await getSupabase().from('wishlists').insert({ user_id: userId, product_id: productId });
   if (error) {
     if ((error as { code?: string }).code === '23505') return;
     console.error('addWishlist error', error);
@@ -76,7 +76,7 @@ export async function addWishlist(userId: string, productId: string): Promise<vo
 }
 
 export async function removeWishlist(userId: string, productId: string): Promise<void> {
-  const { error } = await supabase.from('wishlists').delete().eq('user_id', userId).eq('product_id', productId);
+  const { error } = await getSupabase().from('wishlists').delete().eq('user_id', userId).eq('product_id', productId);
   if (error) {
     console.error('removeWishlist error', error);
     throw error;

@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import { TIER_THRESHOLDS, TIER_RATES, type MembershipTier } from '../constants/membership';
 
 export interface UserProfileInput {
@@ -22,7 +22,7 @@ export interface UserProfile {
  * Supabase Auth 가입/로그인 후 public.users에 프로필 생성 또는 갱신
  */
 export async function upsertUserProfile(input: UserProfileInput): Promise<void> {
-  const { error } = await supabase.from('users').upsert(
+  const { error } = await getSupabase().from('users').upsert(
     {
       id: input.id,
       email: input.email,
@@ -44,7 +44,7 @@ export async function upsertUserProfile(input: UserProfileInput): Promise<void> 
  * 로그인 시 last_login_at 갱신
  */
 export async function updateLastLogin(userId: string): Promise<void> {
-  await supabase
+  await getSupabase()
     .from('users')
     .update({ last_login_at: new Date().toISOString() })
     .eq('id', userId);
@@ -54,7 +54,7 @@ export async function updateLastLogin(userId: string): Promise<void> {
  * 프로필 조회 (등급, 포인트 포함)
  */
 export async function getProfile(userId: string): Promise<UserProfile | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('users')
     .select('id, email, name, phone, membership_tier, points')
     .eq('id', userId)
@@ -81,7 +81,7 @@ export async function updateMembershipTier(userId: string): Promise<void> {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-  const { data: orders, error: ordersError } = await supabase
+  const { data: orders, error: ordersError } = await getSupabase()
     .from('orders')
     .select('total_amount, status')
     .eq('user_id', userId)
@@ -100,7 +100,7 @@ export async function updateMembershipTier(userId: string): Promise<void> {
   if (totalMonth >= TIER_THRESHOLDS.vip) tier = 'vip';
   else if (totalMonth >= TIER_THRESHOLDS.premium) tier = 'premium';
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('users')
     .update({ membership_tier: tier, updated_at: new Date().toISOString() })
     .eq('id', userId);
@@ -126,20 +126,20 @@ export async function addPointsForOrder(
 
   if (earned <= 0) return;
 
-  await supabase
+  await getSupabase()
     .from('orders')
     .update({ earned_points: earned, updated_at: new Date().toISOString() })
     .eq('id', orderId)
     .eq('user_id', userId);
 
-  const { data: userRow } = await supabase
+  const { data: userRow } = await getSupabase()
     .from('users')
     .select('points')
     .eq('id', userId)
     .single();
 
   const currentPoints = Number((userRow as { points: number } | null)?.points ?? 0);
-  await supabase
+  await getSupabase()
     .from('users')
     .update({ points: currentPoints + earned, updated_at: new Date().toISOString() })
     .eq('id', userId);

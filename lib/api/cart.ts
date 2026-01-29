@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import type { Product } from '../../types';
 
 /** Supabase cart_items 행 (products join 포함, 관계명 product 또는 products) */
@@ -72,7 +72,7 @@ function mapCartItem(row: CartItemRow): CartItemWithProduct | null {
  * 사용자 장바구니 조회, 없으면 생성 후 반환
  */
 export async function getOrCreateCart(userId: string): Promise<{ id: string }> {
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('carts')
     .select('id')
     .eq('user_id', userId)
@@ -80,7 +80,7 @@ export async function getOrCreateCart(userId: string): Promise<{ id: string }> {
 
   if (existing) return { id: existing.id };
 
-  const { data: created, error } = await supabase
+  const { data: created, error } = await getSupabase()
     .from('carts')
     .insert({ user_id: userId })
     .select('id')
@@ -97,7 +97,7 @@ export async function getOrCreateCart(userId: string): Promise<{ id: string }> {
  * 장바구니 아이템 목록 조회 (상품 정보 포함)
  */
 export async function getCartItems(cartId: string): Promise<CartItemWithProduct[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('cart_items')
     .select(`
       id, cart_id, product_id, quantity, selected_options, price_snapshot,
@@ -141,7 +141,7 @@ export async function addCartItem(
   const options = selectedOptions ?? {};
   const optionsJson = Object.keys(options).length ? options : {};
 
-  const { data: existingRows } = await supabase
+  const { data: existingRows } = await getSupabase()
     .from('cart_items')
     .select('id, quantity, selected_options')
     .eq('cart_id', cartId)
@@ -152,7 +152,7 @@ export async function addCartItem(
   );
 
   if (existing) {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('cart_items')
       .update({ quantity: existing.quantity + quantity, updated_at: new Date().toISOString() })
       .eq('id', existing.id);
@@ -160,7 +160,7 @@ export async function addCartItem(
     return existing.id;
   }
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error } = await getSupabase()
     .from('cart_items')
     .insert({
       cart_id: cartId,
@@ -187,7 +187,7 @@ export async function updateCartItemQuantity(cartItemId: string, quantity: numbe
     await removeCartItem(cartItemId);
     return;
   }
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('cart_items')
     .update({ quantity, updated_at: new Date().toISOString() })
     .eq('id', cartItemId);
@@ -202,7 +202,7 @@ export async function updateCartItemQuantity(cartItemId: string, quantity: numbe
  * 장바구니 아이템 삭제
  */
 export async function removeCartItem(cartItemId: string): Promise<void> {
-  const { error } = await supabase.from('cart_items').delete().eq('id', cartItemId);
+  const { error } = await getSupabase().from('cart_items').delete().eq('id', cartItemId);
   if (error) {
     console.error('removeCartItem error:', error);
     throw error;

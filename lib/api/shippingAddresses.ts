@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import type { ShippingAddress } from '../../types';
 
 export interface ShippingAddressInput {
@@ -34,7 +34,7 @@ function mapRow(row: Record<string, unknown>): ShippingAddress {
 }
 
 export async function listShippingAddresses(userId: string): Promise<ShippingAddress[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('shipping_addresses')
     .select('*')
     .eq('user_id', userId)
@@ -50,9 +50,9 @@ export async function listShippingAddresses(userId: string): Promise<ShippingAdd
 
 export async function createShippingAddress(userId: string, input: ShippingAddressInput): Promise<ShippingAddress> {
   if (input.is_default) {
-    await supabase.from('shipping_addresses').update({ is_default: false }).eq('user_id', userId);
+    await getSupabase().from('shipping_addresses').update({ is_default: false }).eq('user_id', userId);
   }
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('shipping_addresses')
     .insert({
       user_id: userId,
@@ -83,7 +83,7 @@ export async function updateShippingAddress(
   input: Partial<ShippingAddressInput>
 ): Promise<ShippingAddress> {
   if (input.is_default) {
-    await supabase.from('shipping_addresses').update({ is_default: false }).eq('user_id', userId);
+    await getSupabase().from('shipping_addresses').update({ is_default: false }).eq('user_id', userId);
   }
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (input.recipient_name !== undefined) updates.recipient_name = input.recipient_name;
@@ -97,7 +97,7 @@ export async function updateShippingAddress(
   if (input.delivery_memo !== undefined) updates.delivery_memo = input.delivery_memo;
   if (input.is_default !== undefined) updates.is_default = input.is_default;
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('shipping_addresses')
     .update(updates)
     .eq('id', id)
@@ -113,7 +113,7 @@ export async function updateShippingAddress(
 }
 
 export async function deleteShippingAddress(id: string, userId: string): Promise<void> {
-  const { error } = await supabase.from('shipping_addresses').delete().eq('id', id).eq('user_id', userId);
+  const { error } = await getSupabase().from('shipping_addresses').delete().eq('id', id).eq('user_id', userId);
   if (error) {
     console.error('deleteShippingAddress error:', error);
     throw error;
@@ -121,8 +121,8 @@ export async function deleteShippingAddress(id: string, userId: string): Promise
 }
 
 export async function setDefaultShippingAddress(id: string, userId: string): Promise<void> {
-  await supabase.from('shipping_addresses').update({ is_default: false }).eq('user_id', userId);
-  const { error } = await supabase
+  await getSupabase().from('shipping_addresses').update({ is_default: false }).eq('user_id', userId);
+  const { error } = await getSupabase()
     .from('shipping_addresses')
     .update({ is_default: true, updated_at: new Date().toISOString() })
     .eq('id', id)

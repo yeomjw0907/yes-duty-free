@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import type { Product, ProductOption } from '../../types';
 
 /** Supabase products + categories join 결과 (관계명은 categories 또는 category) */
@@ -47,14 +47,14 @@ function mapRowToProduct(row: ProductRow): Product {
  * 상품 목록 조회 (카테고리 필터 옵션)
  */
 export async function getProducts(categoryName?: string): Promise<Product[]> {
-  let query = supabase
+  let query = getSupabase()
     .from('products')
     .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, categories(name)')
     .eq('is_active', true);
 
   if (categoryName) {
     // category name으로 필터: categories.name = categoryName 인 products
-    const { data: cats } = await supabase.from('categories').select('id').eq('name', categoryName).limit(1);
+    const { data: cats } = await getSupabase().from('categories').select('id').eq('name', categoryName).limit(1);
     const categoryId = cats?.[0]?.id;
     if (categoryId) query = query.eq('category_id', categoryId);
   }
@@ -72,7 +72,7 @@ export async function getProducts(categoryName?: string): Promise<Product[]> {
  * 상품 단건 조회 (옵션 포함)
  */
 export async function getProductById(id: string): Promise<Product | null> {
-  const { data: productRow, error: productError } = await supabase
+  const { data: productRow, error: productError } = await getSupabase()
     .from('products')
     .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, categories(name)')
     .eq('id', id)
@@ -85,7 +85,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     throw productError;
   }
 
-  const { data: optionRows, error: optError } = await supabase
+  const { data: optionRows, error: optError } = await getSupabase()
     .from('product_options')
     .select('option_name, option_value, price_difference, display_order')
     .eq('product_id', id)

@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import { getCartItems, type CartItemWithProduct } from './cart';
 import { getProfile, addPointsForOrder } from './users';
 import { SHIPPING_FEE_BASIC } from '../constants/membership';
@@ -79,7 +79,7 @@ function buildShippingAddressString(addr: ShippingAddress): string {
 export async function createOrder(userId: string, params: CreateOrderParams): Promise<OrderRecord> {
   const { shippingAddressId, cartId, cartItemIds, paymentMethod = 'card', usedPoints: rawUsedPoints } = params;
 
-  const { data: addr, error: addrError } = await supabase
+  const { data: addr, error: addrError } = await getSupabase()
     .from('shipping_addresses')
     .select('*')
     .eq('id', shippingAddressId)
@@ -91,7 +91,7 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
     throw new Error('배송지를 찾을 수 없습니다.');
   }
 
-  const { data: cart, error: cartError } = await supabase
+  const { data: cart, error: cartError } = await getSupabase()
     .from('carts')
     .select('id, user_id')
     .eq('id', cartId)
@@ -122,7 +122,7 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
 
   const orderNumber = formatOrderNumber();
 
-  const { data: order, error: orderError } = await supabase
+  const { data: order, error: orderError } = await getSupabase()
     .from('orders')
     .insert({
       user_id: userId,
@@ -153,7 +153,7 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
 
   for (const item of items) {
     const itemSubtotal = item.priceSnapshot * item.quantity;
-    const { error: itemError } = await supabase.from('order_items').insert({
+    const { error: itemError } = await getSupabase().from('order_items').insert({
       order_id: orderId,
       product_id: item.productId,
       product_name: item.product.name,
@@ -171,16 +171,16 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
   }
 
   for (const item of items) {
-    const { error: delError } = await supabase.from('cart_items').delete().eq('id', item.id);
+    const { error: delError } = await getSupabase().from('cart_items').delete().eq('id', item.id);
     if (delError) {
       console.error('createOrder: cart_items delete error', delError);
     }
   }
 
   if (usedPoints > 0) {
-    const { data: userRow } = await supabase.from('users').select('points').eq('id', userId).single();
+    const { data: userRow } = await getSupabase().from('users').select('points').eq('id', userId).single();
     const currentPoints = Number((userRow as { points: number } | null)?.points ?? 0);
-    await supabase
+    await getSupabase()
       .from('users')
       .update({ points: Math.max(0, currentPoints - usedPoints), updated_at: new Date().toISOString() })
       .eq('id', userId);
@@ -199,7 +199,7 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
  * 내 주문 목록
  */
 export async function getMyOrders(userId: string): Promise<OrderRecord[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('orders')
     .select('*')
     .eq('user_id', userId)
@@ -216,7 +216,7 @@ export async function getMyOrders(userId: string): Promise<OrderRecord[]> {
  * 주문 단건 조회 (본인 주문만)
  */
 export async function getOrderById(orderId: string, userId: string): Promise<OrderWithItems | null> {
-  const { data: order, error: orderError } = await supabase
+  const { data: order, error: orderError } = await getSupabase()
     .from('orders')
     .select('*')
     .eq('id', orderId)
@@ -225,7 +225,7 @@ export async function getOrderById(orderId: string, userId: string): Promise<Ord
 
   if (orderError || !order) return null;
 
-  const { data: orderItems, error: itemsError } = await supabase
+  const { data: orderItems, error: itemsError } = await getSupabase()
     .from('order_items')
     .select('*')
     .eq('order_id', orderId)

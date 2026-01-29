@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import { upsertUserProfile, updateLastLogin } from '../api/users';
 import { createShippingAddress, type ShippingAddressInput } from '../api/shippingAddresses';
 
@@ -10,7 +10,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    getSupabase().auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
@@ -18,7 +18,7 @@ export function useAuth() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = getSupabase().auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -28,7 +28,7 @@ export function useAuth() {
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) return { error };
     if (data.user) {
       await updateLastLogin(data.user.id);
@@ -41,7 +41,7 @@ export function useAuth() {
     password: string,
     options?: { name?: string; phone?: string; address?: ShippingAddressInput }
   ): Promise<{ error: AuthError | null }> => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await getSupabase().auth.signUp({ email, password });
     if (error) return { error };
     if (data.user) {
       await upsertUserProfile({
@@ -58,7 +58,7 @@ export function useAuth() {
   };
 
   const signOut = async (): Promise<void> => {
-    await supabase.auth.signOut();
+    await getSupabase().auth.signOut();
   };
 
   return {

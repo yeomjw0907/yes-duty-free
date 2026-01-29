@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 
 export interface CategoryRow {
   id: string;
@@ -14,7 +14,7 @@ export interface CategoryRow {
  * 카테고리 목록 조회 (display_order 순)
  */
 export async function getCategories(): Promise<CategoryRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('categories')
     .select('id, name, name_en, parent_id, icon, display_order, is_active')
     .eq('is_active', true)
