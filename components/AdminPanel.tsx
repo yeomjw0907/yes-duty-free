@@ -2709,18 +2709,23 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     </div>
   );
 
+  const handleLogout = () => {
+    Promise.resolve(onClose()).catch((e) => console.error('Logout error:', e));
+  };
+
   return (
     <div className="fixed inset-0 z-[60] bg-[#f8f9fa] flex overflow-hidden font-sans">
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
-        <div className="p-8 flex flex-col items-center gap-2 mb-8">
+      <div className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 min-h-0">
+        <div className="p-8 flex flex-col items-center gap-2 shrink-0">
           <div className="w-14 h-14 bg-[#E52D27] rounded-3xl flex items-center justify-center font-black text-white text-2xl shadow-2xl shadow-red-500/30">Y</div>
           <span className="font-black tracking-tighter text-gray-900 text-xl mt-2 uppercase">Yes Duty Admin</span>
         </div>
-        <nav className="flex-grow px-4 space-y-1">
+        <nav className="flex-grow min-h-0 overflow-y-auto px-4 space-y-1">
           <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">Operations</p>
           {menuItems.map((item) => (
             <button
               key={item.id}
+              type="button"
               onClick={() => setActiveTab(item.id)}
               className={`w-full text-left px-4 py-4 rounded-2xl text-[13px] font-black transition-all ${
                 activeTab === item.id ? 'bg-gray-900 text-white shadow-2xl translate-x-1' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-900'
@@ -2730,8 +2735,12 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </button>
           ))}
         </nav>
-        <div className="p-6">
-          <button onClick={onClose} className="w-full bg-red-50 text-red-600 font-black py-4 rounded-2xl text-[13px] hover:bg-red-600 hover:text-white transition-all shadow-lg shadow-red-500/10">
+        <div className="p-6 shrink-0 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full bg-red-50 text-red-600 font-black py-4 rounded-2xl text-[13px] hover:bg-red-600 hover:text-white transition-all shadow-lg shadow-red-500/10 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
             LOGOUT SYSTEM
           </button>
         </div>

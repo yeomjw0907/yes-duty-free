@@ -10,38 +10,47 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getSupabase().auth.getSession().then(async ({ data: { session: s } }) => {
-      if (s?.user) {
-        const profile = await getProfile(s.user.id);
-        if (profile && profile.is_active === false) {
-          await getSupabase().auth.signOut();
-          setSession(null);
-          setUser(null);
+    getSupabase()
+      .auth.getSession()
+      .then(async ({ data: { session: s } }) => {
+        try {
+          if (s?.user) {
+            const profile = await getProfile(s.user.id);
+            if (profile && profile.is_active === false) {
+              await getSupabase().auth.signOut();
+              setSession(null);
+              setUser(null);
+              setLoading(false);
+              return;
+            }
+          }
+          setSession(s);
+          setUser(s?.user ?? null);
+        } finally {
           setLoading(false);
-          return;
         }
-      }
-      setSession(s);
-      setUser(s?.user ?? null);
-      setLoading(false);
-    });
+      })
+      .catch(() => setLoading(false));
 
     const {
       data: { subscription },
     } = getSupabase().auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const profile = await getProfile(session.user.id);
-        if (profile && profile.is_active === false) {
-          await getSupabase().auth.signOut();
-          setSession(null);
-          setUser(null);
-          setLoading(false);
-          return;
+      try {
+        if (session?.user) {
+          const profile = await getProfile(session.user.id);
+          if (profile && profile.is_active === false) {
+            await getSupabase().auth.signOut();
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+            return;
+          }
         }
+        setSession(session);
+        setUser(session?.user ?? null);
+      } finally {
+        setLoading(false);
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();

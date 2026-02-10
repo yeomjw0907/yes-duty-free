@@ -16,13 +16,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error: err } = await onSignIn(email, password);
-    setLoading(false);
-    if (err) {
-      setError(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 올바르지 않습니다.' : err.message);
-      return;
+    try {
+      const { error: err } = await onSignIn(email, password);
+      if (err) {
+        setError(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 올바르지 않습니다.' : err.message);
+        return;
+      }
+      onLoginSuccess();
+    } catch (e) {
+      setError('로그인 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    } finally {
+      setLoading(false);
     }
-    onLoginSuccess();
   };
 
   return (

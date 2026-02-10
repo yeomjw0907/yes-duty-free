@@ -25,7 +25,7 @@ React + TypeScript + Vite + Supabase 기반의 면세점 E-Commerce 플랫폼
 
 ## 📋 단계별 진행 가이드
 
-**차근차근 개발하려면** → **[STEP_BY_STEP.md](./STEP_BY_STEP.md)** 참고
+**차근차근 개발하려면** → **[STEP_BY_STEP.md](./docs/plan/STEP_BY_STEP.md)** 참고
 
 - Step 0: 환경 준비  
 - Step 1~4: Supabase 생성·DB·시드·환경변수  
@@ -107,8 +107,8 @@ dutyfree/
 - **wishlists** - 찜하기
 - **notifications** - 알림
 
-상세 설계: [DATABASE_DESIGN.md](./DATABASE_DESIGN.md)  
-요약표: [TABLES_SUMMARY.md](./TABLES_SUMMARY.md)
+상세 설계: [DATABASE_DESIGN.md](./docs/database/DATABASE_DESIGN.md)  
+요약표: [TABLES_SUMMARY.md](./docs/database/TABLES_SUMMARY.md)
 
 ---
 
@@ -135,7 +135,7 @@ Buckets 생성:
 - `user-profiles` (공개)
 - `review-images` (공개)
 
-자세한 설정: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+자세한 설정: [SUPABASE_SETUP.md](./docs/setup/SUPABASE_SETUP.md)
 
 ---
 
@@ -163,7 +163,7 @@ Buckets 생성:
 - [ ] 실시간 알림
 - [ ] 배송 추적
 
-전체 기능 분석: [FEATURES_ANALYSIS.md](./FEATURES_ANALYSIS.md)
+전체 기능 분석: [FEATURES_ANALYSIS.md](./docs/spec/FEATURES_ANALYSIS.md)
 
 ---
 
@@ -223,11 +223,14 @@ Buckets 생성:
 
 ## 📚 참고 문서
 
-- [**STEP_BY_STEP.md**](./STEP_BY_STEP.md) - **단계별 진행 가이드 (차근차근)**
-- [DATABASE_DESIGN.md](./DATABASE_DESIGN.md) - 상세 데이터베이스 설계
-- [TABLES_SUMMARY.md](./TABLES_SUMMARY.md) - 테이블 요약표
-- [FEATURES_ANALYSIS.md](./FEATURES_ANALYSIS.md) - 기능 분석 및 개선사항
-- [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) - Supabase 설정 가이드
+문서는 `docs/` 아래 폴더별로 정리되어 있습니다. ([docs/README.md](./docs/README.md))
+
+- [**STEP_BY_STEP.md**](./docs/plan/STEP_BY_STEP.md) - 단계별 진행 가이드
+- [DATABASE_DESIGN.md](./docs/database/DATABASE_DESIGN.md) - 상세 데이터베이스 설계
+- [TABLES_SUMMARY.md](./docs/database/TABLES_SUMMARY.md) - 테이블 요약표
+- [FEATURES_ANALYSIS.md](./docs/spec/FEATURES_ANALYSIS.md) - 기능 분석 및 개선사항
+- [SUPABASE_SETUP.md](./docs/setup/SUPABASE_SETUP.md) - Supabase 설정 가이드
+- [UPDATES_CHANGELOG.md](./docs/updates/UPDATES_CHANGELOG.md) - 업데이트 내역
 
 ---
 

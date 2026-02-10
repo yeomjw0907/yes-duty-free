@@ -105,17 +105,22 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
       is_default: true,
     };
     setLoading(true);
-    const { error: err } = await onSignUp(formData.email, formData.password, {
-      name: formData.name,
-      phone: fullPhone,
-      address: addressPayload,
-    });
-    setLoading(false);
-    if (err) {
-      setError(err.message === 'User already registered' ? '이미 가입된 이메일입니다.' : err.message);
-      return;
+    try {
+      const { error: err } = await onSignUp(formData.email, formData.password, {
+        name: formData.name,
+        phone: fullPhone,
+        address: addressPayload,
+      });
+      if (err) {
+        setError(err.message === 'User already registered' ? '이미 가입된 이메일입니다.' : err.message);
+        return;
+      }
+      onSignupSuccess();
+    } catch (e) {
+      setError('회원가입 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    } finally {
+      setLoading(false);
     }
-    onSignupSuccess();
   };
 
   return (

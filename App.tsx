@@ -189,13 +189,15 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentPage !== 'home') return;
     if (isPopupDismissedToday()) return;
-    getPopupEvents().then((list) => {
-      if (list.length > 0) {
-        setPopupEvents(list);
-        setPopupIndex(0);
-        setShowMainPopup(true);
-      }
-    });
+    getPopupEvents()
+      .then((list) => {
+        if (list.length > 0) {
+          setPopupEvents(list);
+          setPopupIndex(0);
+          setShowMainPopup(true);
+        }
+      })
+      .catch(() => {});
   }, [currentPage]);
 
   // 라이브 방송 목록 (메인 섹션 + 라이브 페이지)
@@ -229,22 +231,26 @@ const App: React.FC = () => {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const { error: signInError, user: signedInUser } = await signIn(email, password);
-    if (signInError) {
-      setError(signInError.message || '로그인 정보가 올바르지 않습니다.');
-      return;
-    }
-    if (!signedInUser?.id) {
-      setError('로그인에 실패했습니다.');
-      return;
-    }
-    const isAdmin = await checkIsAdmin(signedInUser.id);
-    if (isAdmin) {
-      setIsAdminLoggedIn(true);
-      setShowAdminLogin(false);
-    } else {
-      setError('관리자 계정이 아닙니다.');
-      await signOut();
+    try {
+      const { error: signInError, user: signedInUser } = await signIn(email, password);
+      if (signInError) {
+        setError(signInError.message || '로그인 정보가 올바르지 않습니다.');
+        return;
+      }
+      if (!signedInUser?.id) {
+        setError('로그인에 실패했습니다.');
+        return;
+      }
+      const isAdmin = await checkIsAdmin(signedInUser.id);
+      if (isAdmin) {
+        setIsAdminLoggedIn(true);
+        setShowAdminLogin(false);
+      } else {
+        setError('관리자 계정이 아닙니다.');
+        await signOut();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '관리자 로그인 중 오류가 발생했습니다.');
     }
   };
 
@@ -338,7 +344,19 @@ const App: React.FC = () => {
     return <IntroPage onComplete={handleIntroComplete} />;
   }
 
-  if (isAdminLoggedIn) return <AdminPanel onClose={async () => { await signOut(); setIsAdminLoggedIn(false); }} />;
+  if (isAdminLoggedIn) {
+    return (
+      <AdminPanel
+        onClose={async () => {
+          try {
+            await signOut();
+          } finally {
+            setIsAdminLoggedIn(false);
+          }
+        }}
+      />
+    );
+  }
 
   return (
     <Layout
