@@ -22,7 +22,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
-        {product.discount > 20 && (
+        {!product.isUnlimitedStock && (product.stockQuantity ?? 0) <= 0 && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span className="bg-gray-900 text-white text-sm font-black px-4 py-2 rounded-lg">품절</span>
+          </div>
+        )}
+        {product.discount > 20 && (product.stockQuantity ?? 0) > 0 && (
           <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-md shadow-lg shadow-red-500/20">
             HOT DEAL
           </div>
@@ -56,7 +61,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
           <p className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{product.brand}</p>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-            <span className="text-[10px] text-gray-500 font-bold">{product.soldCount.toLocaleString()}건+</span>
+            <span className="text-[10px] text-gray-500 font-bold">
+              {!product.isUnlimitedStock && (product.stockQuantity ?? 0) <= 0
+                ? '품절'
+                : product.isUnlimitedStock
+                  ? `${product.soldCount.toLocaleString()}건+`
+                  : `재고 ${(product.stockQuantity ?? 0)}개`}
+            </span>
           </div>
         </div>
         <h3 className="text-[15px] font-bold text-gray-800 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors">

@@ -2,6 +2,7 @@ import { getSupabase } from '../supabase';
 import { getCartItems, type CartItemWithProduct } from './cart';
 import { getProfile, addPointsForOrder } from './users';
 import { getAvailableUserCoupons, computeCouponDiscount, markUserCouponUsed } from './coupons';
+import { getProductsStock } from './products';
 import { SHIPPING_FEE_BASIC } from '../constants/membership';
 import type { ShippingAddress } from '../../types';
 
@@ -117,6 +118,18 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
     throw new Error('주문할 상품이 없습니다.');
   }
 
+  const productIds = [...new Set(items.map((i) => i.productId))];
+  const stockMap = await getProductsStock(productIds);
+  for (const item of items) {
+    const stock = stockMap.get(item.productId);
+    if (!stock) throw new Error(`상품 정보를 찾을 수 없습니다. (${item.product.name})`);
+    if (!stock.is_unlimited_stock && item.quantity > stock.stock_quantity) {
+      throw new Error(
+        `"${item.product.name}" 재고가 부족합니다. (재고: ${stock.stock_quantity}개, 주문: ${item.quantity}개)`
+      );
+    }
+  }
+
   const profile = await getProfile(userId);
   const tier = profile?.membership_tier ?? 'basic';
   const shippingFee = tier === 'basic' ? SHIPPING_FEE_BASIC : 0;
@@ -189,6 +202,23 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
       console.error('createOrder: order_items insert error', itemError);
       throw itemError;
     }
+  }
+
+  const quantityByProduct = new Map<string, number>();
+  for (const item of items) {
+    quantityByProduct.set(item.productId, (quantityByProduct.get(item.productId) ?? 0) + item.quantity);
+  }
+  for (const [productId, totalQty] of quantityByProduct) {
+    const stock = stockMap.get(productId);
+    if (!stock || stock.is_unlimited_stock) continue;
+    const { data: current } = await getSupabase().from('products').select('stock_quantity, sold_count').eq('id', productId).single();
+    if (!current) continue;
+    const newStock = Math.max(0, (current.stock_quantity ?? 0) - totalQty);
+    const newSold = (current.sold_count ?? 0) + totalQty;
+    await getSupabase()
+      .from('products')
+      .update({ stock_quantity: newStock, sold_count: newSold, updated_at: new Date().toISOString() })
+      .eq('id', productId);
   }
 
   for (const item of items) {

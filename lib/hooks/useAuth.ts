@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { getSupabase } from '../supabase';
-import { upsertUserProfile, updateLastLogin } from '../api/users';
+import { upsertUserProfile, updateLastLogin, getProfile } from '../api/users';
 import { createShippingAddress, type ShippingAddressInput } from '../api/shippingAddresses';
 
 export function useAuth() {
@@ -10,7 +10,17 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data: { session: s } }) => {
+    getSupabase().auth.getSession().then(async ({ data: { session: s } }) => {
+      if (s?.user) {
+        const profile = await getProfile(s.user.id);
+        if (profile && profile.is_active === false) {
+          await getSupabase().auth.signOut();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+      }
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
@@ -18,7 +28,17 @@ export function useAuth() {
 
     const {
       data: { subscription },
-    } = getSupabase().auth.onAuthStateChange((_event, session) => {
+    } = getSupabase().auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const profile = await getProfile(session.user.id);
+        if (profile && profile.is_active === false) {
+          await getSupabase().auth.signOut();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -31,6 +51,11 @@ export function useAuth() {
     const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) return { error };
     if (data.user) {
+      const profile = await getProfile(data.user.id);
+      if (profile && profile.is_active === false) {
+        await getSupabase().auth.signOut();
+        return { error: { message: '탈퇴 처리된 계정입니다. 로그인할 수 없습니다.', name: 'UserDeactivated', status: 403 } as AuthError };
+      }
       await updateLastLogin(data.user.id);
     }
     return { error: null, user: data.user };

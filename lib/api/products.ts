@@ -1,4 +1,5 @@
 import { getSupabase } from '../supabase';
+import { recordSearchKeyword } from './insights';
 import type { Product, ProductOption } from '../../types';
 
 /** Supabase products + categories join 결과 (관계명은 categories 또는 category) */
@@ -16,6 +17,10 @@ interface ProductRow {
   discount: number | null;
   categories?: { name: string } | null;
   category?: { name: string } | null;
+  description?: string | null;
+  detail_html?: string | null;
+  stock_quantity?: number;
+  is_unlimited_stock?: boolean;
 }
 
 /** product_options 테이블 행 */
@@ -40,6 +45,9 @@ function mapRowToProduct(row: ProductRow): Product {
     tags: row.tags ?? [],
     soldCount: row.sold_count ?? 0,
     discount: row.discount ?? 0,
+    detailHtml: row.detail_html ?? undefined,
+    stockQuantity: row.stock_quantity ?? 0,
+    isUnlimitedStock: row.is_unlimited_stock ?? false,
   };
 }
 
@@ -58,7 +66,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
 
   const { data, error } = await getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, stock_quantity, is_unlimited_stock, categories(name)')
     .eq('is_active', true)
     .or(`name.ilike.${pattern},brand.ilike.${pattern}`)
     .order('sold_count', { ascending: false });
@@ -67,6 +75,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
     console.error('searchProducts error:', error);
     throw error;
   }
+  recordSearchKeyword(q).catch(() => {});
   return (data ?? []).map((row) => mapRowToProduct(row as ProductRow));
 }
 
@@ -76,7 +85,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
 export async function getProducts(categoryName?: string): Promise<Product[]> {
   let query = getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, stock_quantity, is_unlimited_stock, categories(name)')
     .eq('is_active', true);
 
   if (categoryName) {
@@ -101,7 +110,7 @@ export async function getProducts(categoryName?: string): Promise<Product[]> {
 export async function getProductById(id: string): Promise<Product | null> {
   const { data: productRow, error: productError } = await getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, description, detail_html, stock_quantity, is_unlimited_stock, categories(name)')
     .eq('id', id)
     .eq('is_active', true)
     .single();
@@ -140,4 +149,30 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 
   return product;
+}
+
+/** 상품 재고만 조회 (주문 검증·차감용) */
+export async function getProductsStock(
+  productIds: string[]
+): Promise<Map<string, { stock_quantity: number; is_unlimited_stock: boolean }>> {
+  if (productIds.length === 0) return new Map();
+  const uniq = [...new Set(productIds)];
+  const { data, error } = await getSupabase()
+    .from('products')
+    .select('id, stock_quantity, is_unlimited_stock')
+    .in('id', uniq);
+
+  if (error) {
+    console.error('getProductsStock error:', error);
+    throw error;
+  }
+  const map = new Map<string, { stock_quantity: number; is_unlimited_stock: boolean }>();
+  for (const row of data ?? []) {
+    const r = row as { id: string; stock_quantity: number; is_unlimited_stock: boolean };
+    map.set(r.id, {
+      stock_quantity: r.stock_quantity ?? 0,
+      is_unlimited_stock: r.is_unlimited_stock ?? false,
+    });
+  }
+  return map;
 }

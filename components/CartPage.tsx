@@ -109,6 +109,9 @@ const CartPage: React.FC<CartPageProps> = ({
   }
 
   const totalAmount = items.reduce((sum, item) => sum + item.priceSnapshot * item.quantity, 0);
+  const stockOk = (item: CartItemWithProduct) =>
+    item.product.isUnlimitedStock || (item.product.stockQuantity ?? 0) >= item.quantity;
+  const anyStockShortage = items.some((item) => !stockOk(item));
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 lg:py-16 bg-[#fcfcfc] min-h-screen">
@@ -137,6 +140,12 @@ const CartPage: React.FC<CartPageProps> = ({
                   {Object.entries(item.selectedOptions).map(([k, v]) => `${k}: ${v}`).join(' / ')}
                 </p>
               )}
+              {!item.product.isUnlimitedStock && (
+                <p className="text-xs font-bold mt-0.5">
+                  재고 {(item.product.stockQuantity ?? 0)}개
+                  {!stockOk(item) && <span className="text-red-600 ml-1">· 재고 부족</span>}
+                </p>
+              )}
               <div className="mt-2 flex items-center justify-between">
                 <div className="flex items-center gap-2 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                   <button
@@ -152,9 +161,12 @@ const CartPage: React.FC<CartPageProps> = ({
                   </span>
                   <button
                     type="button"
-                    disabled={updatingId === item.id}
+                    disabled={
+                      updatingId === item.id ||
+                      (!item.product.isUnlimitedStock && item.quantity >= (item.product.stockQuantity ?? 0))
+                    }
                     onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
-                    className="px-3 py-1.5 text-gray-600 font-bold hover:bg-gray-100 disabled:opacity-40"
+                    className="px-3 py-1.5 text-gray-600 font-bold hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     +
                   </button>
@@ -178,16 +190,20 @@ const CartPage: React.FC<CartPageProps> = ({
       </div>
 
       <div className="mt-10 bg-white rounded-2xl border border-gray-100 p-6">
+        {anyStockShortage && (
+          <p className="text-red-600 text-sm font-bold mb-4">일부 상품 재고가 부족합니다. 수량을 조정하거나 삭제해 주세요.</p>
+        )}
         <div className="flex justify-between items-center mb-4">
           <span className="text-gray-600 font-bold">총 결제 예정 금액</span>
           <span className="text-2xl font-black text-red-600">{totalAmount.toLocaleString()}원</span>
         </div>
         <button
           type="button"
+          disabled={anyStockShortage}
           onClick={() => onNavigateToPage('checkout')}
-          className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all"
+          className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
         >
-          주문하기
+          {anyStockShortage ? '재고 부족으로 주문할 수 없습니다' : '주문하기'}
         </button>
         <p className="text-center text-xs text-gray-400 mt-4">배송비는 주문 단계에서 확인됩니다.</p>
       </div>

@@ -15,7 +15,11 @@ import TierBenefitsModal from './components/TierBenefitsModal';
 import OrderDetailModal from './components/OrderDetailModal';
 import ConfirmModal from './components/ConfirmModal';
 import IntroPage from './components/IntroPage';
-import { MOCK_LIVES } from './constants';
+import MainPopupModal from './components/MainPopupModal';
+import { getPopupEvents, getEvents, getEventById } from './lib/api/events';
+import { isPopupDismissedToday } from './components/MainPopupModal';
+import type { EventRow } from './types';
+import { getLiveStreams } from './lib/api/liveStreams';
 
 const INTRO_STORAGE_KEY = 'yes-duty-free-intro-seen';
 import { useProducts, useSearchProducts } from './lib/hooks/useProducts';
@@ -53,6 +57,15 @@ const App: React.FC = () => {
   const [confirmWishlistRemove, setConfirmWishlistRemove] = useState<Product | null>(null);
   const [liveInitialIndex, setLiveInitialIndex] = useState<number | null>(null);
   const liveScrollRef = useRef<HTMLDivElement>(null);
+  const [popupEvents, setPopupEvents] = useState<EventRow[]>([]);
+  const [showMainPopup, setShowMainPopup] = useState(false);
+  const [popupIndex, setPopupIndex] = useState(0);
+  const [boardEventsList, setBoardEventsList] = useState<EventRow[]>([]);
+  const [boardEventsLoading, setBoardEventsLoading] = useState(false);
+  const [boardEventDetail, setBoardEventDetail] = useState<EventRow | null>(null);
+  const [boardEventDetailLoading, setBoardEventDetailLoading] = useState(false);
+  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
+  const [liveStreamsLoading, setLiveStreamsLoading] = useState(false);
 
   const [email, setEmail] = useState('');
   const queryClient = useQueryClient();
@@ -139,7 +152,6 @@ const App: React.FC = () => {
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
-  const liveStreams = MOCK_LIVES as LiveStream[];
   
   const navigateToPage = (page: string, category?: string, subCategory?: string) => {
     setCurrentPage(page);
@@ -172,6 +184,47 @@ const App: React.FC = () => {
     el.scrollTo({ top: liveInitialIndex * slideHeight, behavior: 'smooth' });
     setLiveInitialIndex(null);
   }, [currentPage, liveInitialIndex]);
+
+  // 메인 페이지 진입 시 팝업 공지/이벤트 조회 (오늘 하루 안 보기 체크)
+  useEffect(() => {
+    if (currentPage !== 'home') return;
+    if (isPopupDismissedToday()) return;
+    getPopupEvents().then((list) => {
+      if (list.length > 0) {
+        setPopupEvents(list);
+        setPopupIndex(0);
+        setShowMainPopup(true);
+      }
+    });
+  }, [currentPage]);
+
+  // 라이브 방송 목록 (메인 섹션 + 라이브 페이지)
+  useEffect(() => {
+    setLiveStreamsLoading(true);
+    getLiveStreams().then(setLiveStreams).finally(() => setLiveStreamsLoading(false));
+  }, []);
+
+  // 공지사항/이벤트 게시판 목록
+  useEffect(() => {
+    if (currentPage === 'notices') {
+      setBoardEventsLoading(true);
+      getEvents({ type: 'notice' }).then(setBoardEventsList).finally(() => setBoardEventsLoading(false));
+    } else if (currentPage === 'events') {
+      setBoardEventsLoading(true);
+      getEvents({ type: 'event' }).then(setBoardEventsList).finally(() => setBoardEventsLoading(false));
+    }
+  }, [currentPage]);
+
+  // 공지/이벤트 상세
+  useEffect(() => {
+    if ((currentPage === 'notice-detail' || currentPage === 'event-detail') && activeCategory) {
+      setBoardEventDetail(null);
+      setBoardEventDetailLoading(true);
+      getEventById(activeCategory).then((ev) => {
+        setBoardEventDetail(ev ?? null);
+      }).finally(() => setBoardEventDetailLoading(false));
+    }
+  }, [currentPage, activeCategory]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,6 +295,8 @@ const App: React.FC = () => {
       </div>
 
       <LiveSection
+        liveStreams={liveStreams}
+        isLoading={liveStreamsLoading}
         onNavigateToLive={(index) => {
           setLiveInitialIndex(index ?? 0);
           navigateToPage('live');
@@ -328,49 +383,70 @@ const App: React.FC = () => {
           ref={liveScrollRef}
           className="h-[calc(100vh-64px)] lg:h-[calc(100vh-80px)] overflow-y-scroll snap-y snap-mandatory bg-black scrollbar-hide"
         >
-          {liveStreams.concat(liveStreams).map((live, idx) => (
-            <div key={idx} className="h-full min-h-full w-full snap-start relative flex flex-col items-center justify-center bg-zinc-900 border-b border-white/5">
-              <img src={live.thumbnail} className="absolute inset-0 w-full h-full object-cover opacity-60" alt={live.title} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60"></div>
-              
-              <div className="relative z-10 w-full max-w-lg px-4 sm:px-6 flex flex-col h-full justify-end pb-28 lg:pb-24">
-                <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-red-600 overflow-hidden shrink-0">
-                    <img src={`https://i.pravatar.cc/150?u=${live.id}`} className="w-full h-full object-cover" alt="" />
+          {liveStreams.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-white/60 px-4">
+              <p className="text-lg font-bold">진행 중인 라이브가 없습니다.</p>
+              <button type="button" onClick={() => navigateToPage('home')} className="mt-4 px-6 py-3 bg-white/10 rounded-xl font-bold hover:bg-white/20">홈으로</button>
+            </div>
+          ) : (
+            liveStreams.map((live, idx) => {
+              const linkProduct = live.productId ? products.find((p) => p.id === live.productId) : null;
+              return (
+                <div key={live.id} className="h-full min-h-full w-full snap-start relative flex flex-col items-center justify-center bg-zinc-900 border-b border-white/5">
+                  {live.thumbnail ? (
+                    <img src={live.thumbnail} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="" />
+                  ) : (
+                    <div className="absolute inset-0 bg-zinc-800" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+                  {live.videoEmbedUrl && (
+                    <div className="absolute inset-0 flex items-center justify-center p-4 pt-20 pb-32">
+                      <iframe
+                        src={live.videoEmbedUrl}
+                        title={live.title}
+                        className="w-full max-w-2xl aspect-video rounded-xl bg-black shadow-2xl"
+                        allowFullScreen
+                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                      />
+                    </div>
+                  )}
+                  <div className="relative z-10 w-full max-w-lg px-4 sm:px-6 flex flex-col h-full justify-end pb-28 lg:pb-24">
+                    <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-red-600 overflow-hidden shrink-0 bg-gray-700">
+                        <img src={`https://i.pravatar.cc/150?u=${live.id}`} className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-black text-xs sm:text-sm">DutyFree Official</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse shrink-0" />
+                          <span className="text-white/70 text-[10px] font-bold uppercase tracking-widest">{live.isLive ? 'Live Now' : live.startTime ? `예정 ${live.startTime.slice(0, 10)}` : '방송'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="text-white text-xl sm:text-2xl font-black leading-tight mb-3 sm:mb-4">{live.title}</h3>
+                    <p className="text-white/60 text-xs sm:text-sm mb-6 sm:mb-10 line-clamp-2">지금 바로 입장해서 글로벌 단독 특가 상품을 만나보세요.</p>
+                    <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
+                      <button
+                        type="button"
+                        onClick={() => (linkProduct ? handleProductClick(linkProduct) : products[0] && handleProductClick(products[0]))}
+                        className="flex-1 min-w-0 bg-white text-black py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm hover:bg-red-600 hover:text-white transition-all"
+                      >
+                        실시간 혜택받기
+                      </button>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-white font-black text-xs sm:text-sm">DutyFree Official</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse shrink-0"></span>
-                      <span className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Live Now</span>
+                  <div className="absolute right-3 sm:right-6 bottom-24 lg:bottom-40 flex flex-col gap-4 lg:gap-8 z-20">
+                    <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 fill-red-600" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                      </div>
+                      <span className="text-[9px] sm:text-[10px] font-bold text-white/70 tracking-widest">{live.viewerCount > 0 ? `${(live.viewerCount / 1000).toFixed(1)}k` : '-'}</span>
                     </div>
                   </div>
                 </div>
-                
-                <h3 className="text-white text-xl sm:text-2xl font-black leading-tight mb-3 sm:mb-4">{live.title}</h3>
-                <p className="text-white/60 text-xs sm:text-sm mb-6 sm:mb-10 line-clamp-2">지금 바로 입장해서 글로벌 단독 특가 상품을 만나보세요. 최대 60% 할인 혜택이 쏟아집니다.</p>
-                
-                <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
-                  <button type="button" onClick={() => handleProductClick(products[0])} className="flex-1 min-w-0 bg-white text-black py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm hover:bg-red-600 hover:text-white transition-all">실시간 혜택받기</button>
-                  <button type="button" className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl flex items-center justify-center text-white border border-white/10 hover:bg-white/20">
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Sidebar controls - 모바일에서 하단 메뉴바 위로 올림 */}
-              <div className="absolute right-3 sm:right-6 bottom-24 lg:bottom-40 flex flex-col gap-4 lg:gap-8 z-20">
-                <div className="flex flex-col items-center gap-0.5 sm:gap-1">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10"><svg className="w-5 h-5 sm:w-6 sm:h-6 fill-red-600" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
-                  <span className="text-[9px] sm:text-[10px] font-bold text-white/70 tracking-widest">12.4k</span>
-                </div>
-                <div className="flex flex-col items-center gap-0.5 sm:gap-1">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10"><svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
-                  <span className="text-[9px] sm:text-[10px] font-bold text-white/70 tracking-widest">840</span>
-                </div>
-              </div>
-            </div>
-          ))}
+              );
+            })
+          )}
         </div>
       )}
       {currentPage === 'all_categories' && (
@@ -505,6 +581,13 @@ const App: React.FC = () => {
         </div>
       )}
       {showTierBenefitsModal && <TierBenefitsModal onClose={() => setShowTierBenefitsModal(false)} />}
+      {showMainPopup && popupEvents.length > 0 && popupEvents[popupIndex] && (
+        <MainPopupModal
+          event={popupEvents[popupIndex]}
+          onClose={() => setShowMainPopup(false)}
+          onDismissToday={() => setShowMainPopup(false)}
+        />
+      )}
       <ConfirmModal
         open={!!confirmWishlistRemove}
         title="찜 해제"
@@ -618,6 +701,104 @@ const App: React.FC = () => {
                 </div>
               ))}
            </div>
+        </div>
+      )}
+
+      {currentPage === 'notices' && (
+        <div className="max-w-3xl mx-auto px-4 py-12">
+          <h2 className="text-2xl font-black text-gray-900 mb-8">공지사항</h2>
+          {boardEventsLoading ? (
+            <div className="py-12 text-center text-gray-400 font-bold">목록을 불러오는 중…</div>
+          ) : boardEventsList.length === 0 ? (
+            <div className="py-12 text-center text-gray-400 font-bold">등록된 공지가 없습니다.</div>
+          ) : (
+            <ul className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100">
+              {boardEventsList.map((ev) => (
+                <li key={ev.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigateToPage('notice-detail', ev.id)}
+                    className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="font-bold text-gray-900 truncate pr-4">{ev.title}</span>
+                    <span className="text-sm text-gray-400 shrink-0">
+                      {ev.created_at ? formatOrderDate(ev.created_at) : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {currentPage === 'notice-detail' && (
+        <div className="max-w-3xl mx-auto px-4 py-12">
+          <button type="button" onClick={() => navigateToPage('notices')} className="text-sm font-bold text-gray-500 hover:text-red-600 mb-6">← 목록</button>
+          {boardEventDetailLoading ? (
+            <div className="py-12 text-center text-gray-400 font-bold">불러오는 중…</div>
+          ) : !boardEventDetail ? (
+            <div className="py-12 text-center text-gray-400 font-bold">글이 없거나 삭제되었습니다.</div>
+          ) : (
+            <article className="prose prose-gray max-w-none">
+              <h1 className="text-2xl font-black text-gray-900 mb-2">{boardEventDetail.title}</h1>
+              <p className="text-sm text-gray-500 mb-6">{boardEventDetail.created_at ? formatOrderDate(boardEventDetail.created_at) : ''}</p>
+              <div className="text-gray-700 whitespace-pre-wrap">{boardEventDetail.content || '내용 없음'}</div>
+            </article>
+          )}
+        </div>
+      )}
+
+      {currentPage === 'events' && (
+        <div className="max-w-3xl mx-auto px-4 py-12">
+          <h2 className="text-2xl font-black text-gray-900 mb-8">이벤트</h2>
+          {boardEventsLoading ? (
+            <div className="py-12 text-center text-gray-400 font-bold">목록을 불러오는 중…</div>
+          ) : boardEventsList.length === 0 ? (
+            <div className="py-12 text-center text-gray-400 font-bold">진행 중인 이벤트가 없습니다.</div>
+          ) : (
+            <ul className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100">
+              {boardEventsList.map((ev) => (
+                <li key={ev.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigateToPage('event-detail', ev.id)}
+                    className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="font-bold text-gray-900 truncate pr-4">{ev.title}</span>
+                    <span className="text-sm text-gray-400 shrink-0">
+                      {ev.created_at ? formatOrderDate(ev.created_at) : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {currentPage === 'event-detail' && (
+        <div className="max-w-3xl mx-auto px-4 py-12">
+          <button type="button" onClick={() => navigateToPage('events')} className="text-sm font-bold text-gray-500 hover:text-red-600 mb-6">← 목록</button>
+          {boardEventDetailLoading ? (
+            <div className="py-12 text-center text-gray-400 font-bold">불러오는 중…</div>
+          ) : !boardEventDetail ? (
+            <div className="py-12 text-center text-gray-400 font-bold">글이 없거나 삭제되었습니다.</div>
+          ) : (
+            <article className="prose prose-gray max-w-none">
+              <h1 className="text-2xl font-black text-gray-900 mb-2">{boardEventDetail.title}</h1>
+              <p className="text-sm text-gray-500 mb-6">{boardEventDetail.created_at ? formatOrderDate(boardEventDetail.created_at) : ''}</p>
+              {boardEventDetail.popup_image_url && (
+                <img src={boardEventDetail.popup_image_url} alt={boardEventDetail.title} className="w-full rounded-xl mb-6 object-contain" />
+              )}
+              <div className="text-gray-700 whitespace-pre-wrap">{boardEventDetail.content || '내용 없음'}</div>
+              {boardEventDetail.link_url?.trim() && (
+                <a href={boardEventDetail.link_url.trim()} target="_blank" rel="noopener noreferrer" className="inline-block mt-6 px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700">
+                  자세히 보기
+                </a>
+              )}
+            </article>
+          )}
         </div>
       )}
 

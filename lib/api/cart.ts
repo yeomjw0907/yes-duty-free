@@ -1,4 +1,5 @@
 import { getSupabase } from '../supabase';
+import { getProductsStock } from './products';
 import type { Product } from '../../types';
 
 /** Supabase cart_items 행 (products join 포함, 관계명 product 또는 products) */
@@ -16,6 +17,8 @@ interface CartItemRow {
     price: number;
     original_price: number;
     image_url: string;
+    stock_quantity?: number;
+    is_unlimited_stock?: boolean;
     categories?: { name: string } | null;
     category?: { name: string } | null;
   } | null;
@@ -26,6 +29,8 @@ interface CartItemRow {
     price: number;
     original_price: number;
     image_url: string;
+    stock_quantity?: number;
+    is_unlimited_stock?: boolean;
     categories?: { name: string } | null;
     category?: { name: string } | null;
   } | null;
@@ -64,6 +69,8 @@ function mapCartItem(row: CartItemRow): CartItemWithProduct | null {
       tags: [],
       soldCount: 0,
       discount: 0,
+      stockQuantity: p.stock_quantity ?? 0,
+      isUnlimitedStock: p.is_unlimited_stock ?? false,
     },
   };
 }
@@ -101,7 +108,7 @@ export async function getCartItems(cartId: string): Promise<CartItemWithProduct[
     .from('cart_items')
     .select(`
       id, cart_id, product_id, quantity, selected_options, price_snapshot,
-      products (id, name, brand, price, original_price, image_url, categories(name))
+      products (id, name, brand, price, original_price, image_url, stock_quantity, is_unlimited_stock, categories(name))
     `)
     .eq('cart_id', cartId)
     .order('created_at', { ascending: false });
@@ -141,6 +148,8 @@ export async function addCartItem(
   const options = selectedOptions ?? {};
   const optionsJson = Object.keys(options).length ? options : {};
 
+  const stockMap = await getProductsStock([productId]);
+  const stock = stockMap.get(productId);
   const { data: existingRows } = await getSupabase()
     .from('cart_items')
     .select('id, quantity, selected_options')
@@ -150,6 +159,13 @@ export async function addCartItem(
   const existing = existingRows?.find((row) =>
     optionsMatch(row.selected_options as Record<string, string> | null, optionsJson)
   );
+  const existingQty = existing?.quantity ?? 0;
+  const totalQty = existingQty + quantity;
+  if (stock && !stock.is_unlimited_stock && totalQty > stock.stock_quantity) {
+    throw new Error(
+      `재고가 부족합니다. (재고: ${stock.stock_quantity}개${existingQty > 0 ? `, 장바구니: ${existingQty}개` : ''})`
+    );
+  }
 
   if (existing) {
     const { error } = await getSupabase()
@@ -180,12 +196,26 @@ export async function addCartItem(
 }
 
 /**
- * 장바구니 아이템 수량 변경
+ * 장바구니 아이템 수량 변경 (재고 초과 시 에러)
  */
 export async function updateCartItemQuantity(cartItemId: string, quantity: number): Promise<void> {
   if (quantity < 1) {
     await removeCartItem(cartItemId);
     return;
+  }
+  const { data: cartItem, error: fetchError } = await getSupabase()
+    .from('cart_items')
+    .select('product_id')
+    .eq('id', cartItemId)
+    .single();
+  if (fetchError || !cartItem) {
+    if (fetchError) throw fetchError;
+    return;
+  }
+  const stockMap = await getProductsStock([(cartItem as { product_id: string }).product_id]);
+  const stock = stockMap.get((cartItem as { product_id: string }).product_id);
+  if (stock && !stock.is_unlimited_stock && quantity > stock.stock_quantity) {
+    throw new Error(`재고가 부족합니다. (최대 ${stock.stock_quantity}개)`);
   }
   const { error } = await getSupabase()
     .from('cart_items')

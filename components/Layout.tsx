@@ -286,7 +286,8 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                 <div>
                   <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">Customer Support</h4>
                   <ul className="text-sm space-y-4 font-medium text-gray-500">
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('notice')}>공지사항</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('notices'); }}>공지사항</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('events'); }}>이벤트</li>
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('faq')}>자주 묻는 질문</li>
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('inquiry')}>1:1 문의하기</li>
                   </ul>
@@ -324,15 +325,6 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
       )}
 
       {/* Footer 모달 */}
-      <FooterModal open={footerModal === 'notice'} title="공지사항" onClose={() => setFooterModal(null)}>
-        <p className="mb-4">Yes Duty Free 공지사항을 확인하실 수 있습니다.</p>
-        <ul className="space-y-3 text-gray-600">
-          <li>· 서비스 점검 안내 (예정)</li>
-          <li>· 배송비 정책 변경 안내</li>
-          <li>· 개인정보 처리방침 개정 안내</li>
-        </ul>
-        <p className="mt-6 text-gray-400 text-xs">자세한 내용은 추후 업데이트됩니다.</p>
-      </FooterModal>
       <FooterModal open={footerModal === 'faq'} title="자주 묻는 질문" onClose={() => setFooterModal(null)}>
         <div className="space-y-6">
           <div>

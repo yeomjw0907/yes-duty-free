@@ -56,6 +56,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
   };
 
+  const maxQuantity = displayProduct.isUnlimitedStock ? 99 : Math.max(0, displayProduct.stockQuantity ?? 0);
+  const isOutOfStock = !displayProduct.isUnlimitedStock && maxQuantity <= 0;
+  const effectiveQuantity = Math.min(quantity, isOutOfStock ? 0 : maxQuantity || 1);
+
+  React.useEffect(() => {
+    if (!displayProduct.isUnlimitedStock && maxQuantity > 0 && quantity > maxQuantity) {
+      setQuantity(maxQuantity);
+    }
+  }, [displayProduct.id, maxQuantity, quantity, displayProduct.isUnlimitedStock]);
+
   const relatedProducts = products.filter(p => p.category === displayProduct.category && p.id !== displayProduct.id).slice(0, 4);
   const bestProducts = products.slice(0, 4);
 
@@ -137,42 +147,53 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
           <div className="bg-gray-50 p-4 rounded-xl space-y-3">
              <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-gray-700">수량 선택</span>
-                <div className="flex border border-gray-300 bg-white rounded-lg items-center overflow-hidden">
-                  <button 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))} 
-                    className="px-3 py-1 text-gray-600 font-bold border-r border-gray-300 hover:bg-gray-50 transition-colors"
-                  >
-                    -
-                  </button>
-                  <span className="px-6 py-1 text-base font-extrabold text-gray-900 min-w-[3rem] text-center">
-                    {quantity}
-                  </span>
-                  <button 
-                    onClick={() => setQuantity(quantity + 1)} 
-                    className="px-3 py-1 text-gray-600 font-bold border-l border-gray-300 hover:bg-gray-50 transition-colors"
-                  >
-                    +
-                  </button>
+                <div className="flex items-center gap-2">
+                  {!displayProduct.isUnlimitedStock && (
+                    <span className="text-xs font-bold text-gray-500">
+                      {maxQuantity <= 0 ? '품절' : `재고 ${maxQuantity}개`}
+                    </span>
+                  )}
+                  <div className="flex border border-gray-300 bg-white rounded-lg items-center overflow-hidden">
+                    <button 
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))} 
+                      disabled={isOutOfStock || quantity <= 1}
+                      className="px-3 py-1 text-gray-600 font-bold border-r border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      -
+                    </button>
+                    <span className="px-6 py-1 text-base font-extrabold text-gray-900 min-w-[3rem] text-center">
+                      {effectiveQuantity}
+                    </span>
+                    <button 
+                      onClick={() => setQuantity(Math.min(maxQuantity || 99, quantity + 1))} 
+                      disabled={isOutOfStock || quantity >= (maxQuantity || 99)}
+                      className="px-3 py-1 text-gray-600 font-bold border-l border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
              </div>
              <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
                 <span className="text-sm font-bold text-gray-900">총 결제 금액</span>
-                <span className="text-xl font-bold text-red-600">{(displayProduct.price * quantity).toLocaleString()}원</span>
+                <span className="text-xl font-bold text-red-600">{(displayProduct.price * effectiveQuantity).toLocaleString()}원</span>
              </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <button 
-              onClick={() => onAddToCart(displayProduct, quantity, selectedOptions)}
-              className="flex-grow py-4 rounded-xl border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors"
+              onClick={() => onAddToCart(displayProduct, effectiveQuantity, selectedOptions)}
+              disabled={isOutOfStock}
+              className="flex-grow py-4 rounded-xl border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
             >
-              장바구니 담기
+              {isOutOfStock ? '품절' : '장바구니 담기'}
             </button>
             <button 
-              onClick={() => onImmediatePurchase(displayProduct, quantity, selectedOptions)}
-              className="flex-grow py-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all"
+              onClick={() => onImmediatePurchase(displayProduct, effectiveQuantity, selectedOptions)}
+              disabled={isOutOfStock}
+              className="flex-grow py-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              즉시 구매하기
+              {isOutOfStock ? '품절' : '즉시 구매하기'}
             </button>
           </div>
         </div>
@@ -199,21 +220,28 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
 
       {activeTab === '상품설명' && (
         <div className="max-w-4xl mx-auto px-4 py-16">
-          <div className="space-y-12">
-            <div className="text-center space-y-6">
-               <h2 className="text-3xl font-bold text-gray-900">당신의 피부를 위한 최고의 선택</h2>
-               <p className="text-lg text-gray-600 leading-relaxed">
-                 전세계 면세점에서 가장 사랑받는 {displayProduct.brand}의 시그니처 아이템입니다.<br/>
-                 현지 매장과 동일한 품질을 면세 가격 그대로 만나보세요.
-               </p>
-               <div className="aspect-[4/5] bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
+          {displayProduct.detailHtml?.trim() ? (
+            <div
+              className="product-detail-html text-gray-700 leading-relaxed [&_img]:max-w-full [&_img]:rounded-lg [&_p]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-2"
+              dangerouslySetInnerHTML={{ __html: displayProduct.detailHtml }}
+            />
+          ) : (
+            <div className="space-y-12">
+              <div className="text-center space-y-6">
+                <h2 className="text-3xl font-bold text-gray-900">당신의 피부를 위한 최고의 선택</h2>
+                <p className="text-lg text-gray-600 leading-relaxed">
+                  전세계 면세점에서 가장 사랑받는 {displayProduct.brand}의 시그니처 아이템입니다.<br/>
+                  현지 매장과 동일한 품질을 면세 가격 그대로 만나보세요.
+                </p>
+                <div className="aspect-[4/5] bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
                   <img src={`https://picsum.photos/seed/${displayProduct.id}detail/800/1000`} className="w-full h-full object-cover" alt="" />
-               </div>
+                </div>
+              </div>
+              <div className="text-center py-10">
+                <button className="w-full py-4 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">스토리 더보기 ⌵</button>
+              </div>
             </div>
-            <div className="text-center py-10">
-               <button className="w-full py-4 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">스토리 더보기 ⌵</button>
-            </div>
-          </div>
+          )}
         </div>
       )}
 

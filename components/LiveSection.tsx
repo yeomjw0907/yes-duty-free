@@ -1,13 +1,13 @@
 import React from 'react';
-import { MOCK_LIVES } from '../constants';
-import { LiveStream } from '../types';
+import type { LiveStream } from '../types';
 
 interface LiveSectionProps {
+  liveStreams?: LiveStream[];
+  isLoading?: boolean;
   onNavigateToLive?: (liveIndex?: number) => void;
 }
 
-const LiveSection: React.FC<LiveSectionProps> = ({ onNavigateToLive }) => {
-  const liveStreams = MOCK_LIVES as LiveStream[];
+const LiveSection: React.FC<LiveSectionProps> = ({ liveStreams = [], isLoading, onNavigateToLive }) => {
 
   return (
     <div className="py-16 bg-white border-y border-gray-50">
@@ -33,9 +33,16 @@ const LiveSection: React.FC<LiveSectionProps> = ({ onNavigateToLive }) => {
         </div>
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          {liveStreams.concat(liveStreams[0]).map((live, idx) => (
+          {isLoading ? (
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="aspect-[9/16] rounded-2xl bg-gray-100 animate-pulse" />
+            ))
+          ) : liveStreams.length === 0 ? (
+            <p className="col-span-full text-center text-gray-400 font-bold py-8">진행 예정인 라이브가 없습니다.</p>
+          ) : (
+            (liveStreams.length >= 4 ? liveStreams : liveStreams.concat(liveStreams[0])).map((live, idx) => (
             <div
-              key={live.id + idx}
+              key={`${live.id}-${idx}`}
               role="button"
               tabIndex={0}
               onClick={() => onNavigateToLive?.(idx)}
@@ -43,11 +50,15 @@ const LiveSection: React.FC<LiveSectionProps> = ({ onNavigateToLive }) => {
               className="relative group cursor-pointer flex flex-col gap-3"
             >
               <div className="aspect-[9/16] relative overflow-hidden rounded-2xl shadow-lg bg-gray-100">
-                <img 
-                  src={live.thumbnail} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  alt={live.title}
-                />
+                {live.thumbnail ? (
+                  <img 
+                    src={live.thumbnail} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    alt={live.title}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold">No image</div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-80"></div>
                 
                 {live.isLive ? (
@@ -83,7 +94,7 @@ const LiveSection: React.FC<LiveSectionProps> = ({ onNavigateToLive }) => {
                 </div>
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
     </div>

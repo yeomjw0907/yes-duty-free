@@ -29,6 +29,12 @@ export interface Product {
   discount: number;
   soldCount: number;
   options?: ProductOption[];
+  /** 상품 상세 페이지 HTML (관리자 에디터 입력) */
+  detailHtml?: string | null;
+  /** 재고 수량 (없으면 0 또는 무제한으로 간주) */
+  stockQuantity?: number;
+  /** 무제한 재고 여부 */
+  isUnlimitedStock?: boolean;
 }
 
 export interface CartItem extends Product {
@@ -84,6 +90,23 @@ export interface Order {
   memo?: string;
 }
 
+/** DB 라이브 방송 행 */
+export interface LiveStreamRow {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  video_embed_url: string | null;
+  product_id: string | null;
+  scheduled_at: string | null;
+  status: 'scheduled' | 'live' | 'ended';
+  display_order: number;
+  is_active: boolean;
+  viewer_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 사이트 표시용 라이브 (기존 LiveStream 호환) */
 export interface LiveStream {
   id: string;
   title: string;
@@ -91,6 +114,39 @@ export interface LiveStream {
   viewerCount: number;
   isLive: boolean;
   startTime?: string;
+  /** 임베드 재생용 URL (페이스북/유튜브 등) */
+  videoEmbedUrl?: string | null;
+  /** 연결 상품 ID (클릭 시 상품 상세) */
+  productId?: string | null;
+}
+
+/** DB 배너 행 */
+export interface BannerRow {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  image_url: string;
+  mobile_image_url: string | null;
+  link_url: string | null;
+  position: 'main' | 'sub';
+  display_order: number;
+  valid_from: string | null;
+  valid_until: string | null;
+  tag_text: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 사이트 히어로 배너 슬라이드용 */
+export interface BannerSlide {
+  id: string;
+  tag: string;
+  title: string;
+  desc: string;
+  img: string;
+  linkUrl: string | null;
 }
 
 /** 상품 리뷰 */
@@ -107,6 +163,24 @@ export interface Review {
   created_at: string;
   updated_at?: string;
   user_name?: string;
+}
+
+/** 공지/이벤트 (게시판 + 메인 팝업) */
+export interface EventRow {
+  id: string;
+  title: string;
+  content: string;
+  content_html: string | null;
+  type: 'notice' | 'event';
+  popup_image_url: string | null;
+  link_url: string | null;
+  is_popup: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 /** 해외 배송지 (Address Line 1 = 거리·건물, Line 2 = 호실·층·Apt - 국내 기본/상세 주소와 유사) */

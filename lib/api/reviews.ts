@@ -41,6 +41,7 @@ export async function getReviewsByProductId(productId: string): Promise<Review[]
     .from('reviews')
     .select('id, product_id, user_id, rating, title, content, image_urls, helpful_count, is_verified_purchase, created_at, updated_at, users(name)')
     .eq('product_id', productId)
+    .eq('is_hidden', false)
     .order('created_at', { ascending: false });
 
   if (error) {

@@ -16,6 +16,7 @@ export interface UserProfile {
   phone: string | null;
   membership_tier: MembershipTier;
   points: number;
+  is_active: boolean;
 }
 
 /**
@@ -56,7 +57,7 @@ export async function updateLastLogin(userId: string): Promise<void> {
 export async function getProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await getSupabase()
     .from('users')
-    .select('id, email, name, phone, membership_tier, points')
+    .select('id, email, name, phone, membership_tier, points, is_active')
     .eq('id', userId)
     .single();
 
@@ -68,6 +69,7 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
     phone: data.phone ?? null,
     membership_tier: (data.membership_tier as MembershipTier) ?? 'basic',
     points: Number(data.points) ?? 0,
+    is_active: data.is_active ?? true,
   };
 }
 
