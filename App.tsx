@@ -298,6 +298,7 @@ const App: React.FC = () => {
       authLoading={authLoading}
       cartItemCount={cartItemCount}
       onSearchSubmit={handleSearchSubmit}
+      onOpenAdminLogin={() => setShowAdminLogin(true)}
     >
       {currentPage === 'home' && renderHome()}
       {currentPage === 'search' && (

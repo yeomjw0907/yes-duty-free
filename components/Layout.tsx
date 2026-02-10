@@ -20,13 +20,15 @@ interface LayoutProps {
   cartItemCount?: number;
   /** 헤더 검색창에서 검색 시 (Enter 등): 검색어 전달 후 검색 페이지로 이동 */
   onSearchSubmit?: (query: string) => void;
+  /** 관리자 로그인 모달 열기 (푸터 "관리자" 링크용) */
+  onOpenAdminLogin?: () => void;
 }
 
 const tierLabel = (tier: string) => (tier === 'vip' ? 'VIP' : tier === 'premium' ? 'Premium' : 'Basic');
 
 type FooterModalType = 'notice' | 'faq' | 'inquiry' | 'customs' | 'countries' | 'terms' | 'privacy' | null;
 
-const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, products, productsLoading, activeCategory, user, profile, onLogout, authLoading, cartItemCount = 0, onSearchSubmit }) => {
+const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, products, productsLoading, activeCategory, user, profile, onLogout, authLoading, cartItemCount = 0, onSearchSubmit, onOpenAdminLogin }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [footerModal, setFooterModal] = useState<FooterModalType>(null);
@@ -310,6 +312,9 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
               <span className="order-2 sm:order-1">© 2025 Onecation Co., Ltd. All rights reserved.</span>
               <div className="flex gap-6 sm:gap-8 order-1 sm:order-2">
+                {onOpenAdminLogin && (
+                  <span className="hover:text-white cursor-pointer transition-colors" onClick={onOpenAdminLogin}>관리자</span>
+                )}
                 <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('terms')}>Terms of Service</span>
                 <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('privacy')}>Privacy Policy</span>
               </div>

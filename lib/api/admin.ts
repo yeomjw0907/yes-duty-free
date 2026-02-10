@@ -101,3 +101,142 @@ export async function updateOrderByAdmin(
 }
 
 export { ORDER_STATUSES };
+
+// --- Admin 상품 관리 ---
+
+export interface AdminProductRow {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  original_price: number;
+  image_url: string;
+  category_id: string | null;
+  sub_category: string | null;
+  tags: string[] | null;
+  sold_count: number;
+  stock_quantity: number;
+  is_active: boolean;
+  discount: number | null;
+  created_at: string;
+  categories: { name: string } | null;
+}
+
+export interface AdminProductCreate {
+  name: string;
+  brand: string;
+  price: number;
+  original_price: number;
+  image_url: string;
+  category_id?: string | null;
+  sub_category?: string | null;
+  tags?: string[];
+  stock_quantity?: number;
+  is_active?: boolean;
+  description?: string | null;
+}
+
+export interface AdminProductUpdate {
+  name?: string;
+  brand?: string;
+  price?: number;
+  original_price?: number;
+  image_url?: string;
+  category_id?: string | null;
+  sub_category?: string | null;
+  tags?: string[];
+  stock_quantity?: number;
+  is_active?: boolean;
+  description?: string | null;
+}
+
+/**
+ * 관리자용: 전체 상품 목록 (비노출 포함, 카테고리명 포함)
+ */
+export async function getAdminProducts(opts?: {
+  categoryId?: string | null;
+  search?: string;
+}): Promise<AdminProductRow[]> {
+  let query = getSupabase()
+    .from('products')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, stock_quantity, is_active, discount, created_at, categories(name)')
+    .order('created_at', { ascending: false });
+
+  if (opts?.categoryId) {
+    query = query.eq('category_id', opts.categoryId);
+  }
+  if (opts?.search?.trim()) {
+    const q = opts.search.trim();
+    query = query.or(`name.ilike.%${q}%,brand.ilike.%${q}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('getAdminProducts error:', error);
+    throw error;
+  }
+  return (data ?? []) as AdminProductRow[];
+}
+
+/**
+ * 관리자용: 상품 등록
+ */
+export async function createAdminProduct(p: AdminProductCreate): Promise<AdminProductRow> {
+  const row: Record<string, unknown> = {
+    name: p.name,
+    brand: p.brand,
+    price: p.price,
+    original_price: p.original_price ?? p.price,
+    image_url: p.image_url,
+    category_id: p.category_id ?? null,
+    sub_category: p.sub_category ?? null,
+    tags: p.tags ?? [],
+    stock_quantity: p.stock_quantity ?? 0,
+    is_active: p.is_active ?? true,
+    description: p.description ?? null,
+  };
+  const { data, error } = await getSupabase().from('products').insert(row).select().single();
+  if (error) {
+    console.error('createAdminProduct error:', error);
+    throw error;
+  }
+  return data as AdminProductRow;
+}
+
+/**
+ * 관리자용: 상품 수정
+ */
+export async function updateAdminProduct(id: string, p: AdminProductUpdate): Promise<void> {
+  const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (p.name !== undefined) row.name = p.name;
+  if (p.brand !== undefined) row.brand = p.brand;
+  if (p.price !== undefined) row.price = p.price;
+  if (p.original_price !== undefined) row.original_price = p.original_price;
+  if (p.image_url !== undefined) row.image_url = p.image_url;
+  if (p.category_id !== undefined) row.category_id = p.category_id;
+  if (p.sub_category !== undefined) row.sub_category = p.sub_category;
+  if (p.tags !== undefined) row.tags = p.tags;
+  if (p.stock_quantity !== undefined) row.stock_quantity = p.stock_quantity;
+  if (p.is_active !== undefined) row.is_active = p.is_active;
+  if (p.description !== undefined) row.description = p.description;
+
+  const { error } = await getSupabase().from('products').update(row).eq('id', id);
+  if (error) {
+    console.error('updateAdminProduct error:', error);
+    throw error;
+  }
+}
+
+/**
+ * 관리자용: 상품 재고만 수정
+ */
+export async function updateAdminProductStock(productId: string, stockQuantity: number): Promise<void> {
+  const { error } = await getSupabase()
+    .from('products')
+    .update({ stock_quantity: stockQuantity, updated_at: new Date().toISOString() })
+    .eq('id', productId);
+  if (error) {
+    console.error('updateAdminProductStock error:', error);
+    throw error;
+  }
+}
