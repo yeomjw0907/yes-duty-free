@@ -43,6 +43,33 @@ function mapRowToProduct(row: ProductRow): Product {
   };
 }
 
+/** ilike 패턴에서 % _ 이스케이프 */
+function escapeIlikePattern(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+/**
+ * 상품명·브랜드 검색 (일치 또는 부분 일치)
+ */
+export async function searchProducts(query: string): Promise<Product[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const pattern = `%${escapeIlikePattern(q)}%`;
+
+  const { data, error } = await getSupabase()
+    .from('products')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, categories(name)')
+    .eq('is_active', true)
+    .or(`name.ilike.${pattern},brand.ilike.${pattern}`)
+    .order('sold_count', { ascending: false });
+
+  if (error) {
+    console.error('searchProducts error:', error);
+    throw error;
+  }
+  return (data ?? []).map((row) => mapRowToProduct(row as ProductRow));
+}
+
 /**
  * 상품 목록 조회 (카테고리 필터 옵션)
  */

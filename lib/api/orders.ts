@@ -1,6 +1,7 @@
 import { getSupabase } from '../supabase';
 import { getCartItems, type CartItemWithProduct } from './cart';
 import { getProfile, addPointsForOrder } from './users';
+import { getAvailableUserCoupons, computeCouponDiscount, markUserCouponUsed } from './coupons';
 import { SHIPPING_FEE_BASIC } from '../constants/membership';
 import type { ShippingAddress } from '../../types';
 
@@ -13,6 +14,8 @@ export interface CreateOrderParams {
   paymentMethod?: string;
   /** 사용할 적립금 (원). 사용자 포인트 초과 시 서버에서 상한 적용 */
   usedPoints?: number;
+  /** 사용할 보유 쿠폰 ID (user_coupons.id) */
+  userCouponId?: string;
 }
 
 /** DB orders 행 → 주문 타입 */
@@ -77,7 +80,7 @@ function buildShippingAddressString(addr: ShippingAddress): string {
  * 주문 생성: order_number 생성, orders/order_items insert, 해당 장바구니 아이템 삭제
  */
 export async function createOrder(userId: string, params: CreateOrderParams): Promise<OrderRecord> {
-  const { shippingAddressId, cartId, cartItemIds, paymentMethod = 'card', usedPoints: rawUsedPoints } = params;
+  const { shippingAddressId, cartId, cartItemIds, paymentMethod = 'card', usedPoints: rawUsedPoints, userCouponId } = params;
 
   const { data: addr, error: addrError } = await getSupabase()
     .from('shipping_addresses')
@@ -113,10 +116,22 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
   const tier = profile?.membership_tier ?? 'basic';
   const shippingFee = tier === 'basic' ? SHIPPING_FEE_BASIC : 0;
   const subtotal = items.reduce((sum, i) => sum + i.priceSnapshot * i.quantity, 0);
-  const discountAmount = 0;
+  const orderAmountBeforeCoupon = subtotal + shippingFee;
+
+  let discountAmount = 0;
+  let appliedUserCouponId: string | null = null;
+  if (userCouponId) {
+    const available = await getAvailableUserCoupons(userId, orderAmountBeforeCoupon);
+    const selected = available.find((uc) => uc.id === userCouponId);
+    if (selected) {
+      discountAmount = computeCouponDiscount(selected.coupon, orderAmountBeforeCoupon);
+      appliedUserCouponId = selected.id;
+    }
+  }
+
   const userPoints = profile?.points ?? 0;
-  const usedPoints = Math.min(Math.max(0, Math.floor(rawUsedPoints ?? 0)), userPoints, subtotal + shippingFee);
-  const totalAmount = Math.max(0, subtotal + shippingFee - discountAmount - usedPoints);
+  const usedPoints = Math.min(Math.max(0, Math.floor(rawUsedPoints ?? 0)), userPoints, orderAmountBeforeCoupon - discountAmount);
+  const totalAmount = Math.max(0, orderAmountBeforeCoupon - discountAmount - usedPoints);
 
   const shippingAddressStr = buildShippingAddressString(addr as unknown as ShippingAddress);
 
@@ -133,6 +148,7 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
       discount_amount: discountAmount,
       total_amount: totalAmount,
       used_points: usedPoints,
+      used_coupon_id: appliedUserCouponId ?? null,
       recipient_name: addr.recipient_name,
       recipient_phone: addr.phone,
       shipping_country: addr.country,
@@ -184,6 +200,10 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
       .from('users')
       .update({ points: Math.max(0, currentPoints - usedPoints), updated_at: new Date().toISOString() })
       .eq('id', userId);
+  }
+
+  if (appliedUserCouponId) {
+    await markUserCouponUsed(appliedUserCouponId);
   }
 
   try {

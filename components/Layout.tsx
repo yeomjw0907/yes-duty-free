@@ -18,13 +18,15 @@ interface LayoutProps {
   onLogout?: () => Promise<void>;
   authLoading?: boolean;
   cartItemCount?: number;
+  /** 헤더 검색창에서 검색 시 (Enter 등): 검색어 전달 후 검색 페이지로 이동 */
+  onSearchSubmit?: (query: string) => void;
 }
 
 const tierLabel = (tier: string) => (tier === 'vip' ? 'VIP' : tier === 'premium' ? 'Premium' : 'Basic');
 
 type FooterModalType = 'notice' | 'faq' | 'inquiry' | 'customs' | 'countries' | 'terms' | 'privacy' | null;
 
-const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, products, productsLoading, activeCategory, user, profile, onLogout, authLoading, cartItemCount = 0 }) => {
+const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, products, productsLoading, activeCategory, user, profile, onLogout, authLoading, cartItemCount = 0, onSearchSubmit }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [footerModal, setFooterModal] = useState<FooterModalType>(null);
@@ -59,15 +61,40 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               <div className="flex items-center pointer-events-none shrink-0">
                  <svg className="w-6 h-6 lg:w-9 lg:h-9 text-gray-900 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               </div>
-              <input 
+              <input
                 autoFocus
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const q = searchQuery.trim();
+                    if (q && onSearchSubmit) {
+                      onSearchSubmit(q);
+                      setIsSearchOpen(false);
+                    }
+                  }
+                }}
                 placeholder="어떤 면세 혜택을 찾으시나요?"
                 className="flex-1 min-w-0 text-base sm:text-lg lg:text-3xl font-black outline-none bg-transparent placeholder:text-gray-200 transition-all text-gray-900"
               />
-              <button 
+              <button
+                type="button"
+                onClick={() => {
+                  const q = searchQuery.trim();
+                  if (q && onSearchSubmit) {
+                    onSearchSubmit(q);
+                    setIsSearchOpen(false);
+                  } else {
+                    setIsSearchOpen(false);
+                  }
+                }}
+                className="p-2 lg:p-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all shrink-0 font-black text-sm lg:text-base"
+              >
+                검색
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsSearchOpen(false)}
                 className="p-2 lg:p-3 bg-gray-50 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all shrink-0"
               >

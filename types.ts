@@ -46,6 +46,29 @@ export interface Coupon {
   claimed?: boolean;
 }
 
+/** 쿠폰 마스터 (DB coupons) */
+export interface CouponRow {
+  id: string;
+  code: string;
+  title: string;
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
+  min_order_amount: number;
+  max_discount_amount: number | null;
+  valid_until: string;
+}
+
+/** 사용자 보유 쿠폰 (user_coupons + coupon 정보) */
+export interface UserCouponWithDetail {
+  id: string;
+  user_id: string;
+  coupon_id: string;
+  is_used: boolean;
+  used_at: string | null;
+  created_at: string;
+  coupon: CouponRow;
+}
+
 export interface Order {
   id: string;
   date: string;
@@ -68,6 +91,22 @@ export interface LiveStream {
   viewerCount: number;
   isLive: boolean;
   startTime?: string;
+}
+
+/** 상품 리뷰 */
+export interface Review {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  title?: string;
+  content: string;
+  image_urls?: string[];
+  helpful_count: number;
+  is_verified_purchase: boolean;
+  created_at: string;
+  updated_at?: string;
+  user_name?: string;
 }
 
 /** 해외 배송지 (Address Line 1 = 거리·건물, Line 2 = 호실·층·Apt - 국내 기본/상세 주소와 유사) */

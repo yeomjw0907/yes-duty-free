@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getProducts, getProductById } from '../api/products';
+import { getProducts, getProductById, searchProducts } from '../api/products';
 import type { Product } from '../../types';
 
 const PRODUCTS_QUERY_KEY = 'products';
@@ -32,5 +32,22 @@ export function useProduct(id: string | null) {
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,
+  };
+}
+
+export function useSearchProducts(query: string) {
+  const trimmed = query.trim();
+  const searchQuery = useQuery({
+    queryKey: [PRODUCTS_QUERY_KEY, 'search', trimmed],
+    queryFn: () => searchProducts(trimmed),
+    enabled: trimmed.length > 0,
+    staleTime: 1000 * 60,
+  });
+  return {
+    products: searchQuery.data ?? [],
+    isLoading: searchQuery.isLoading,
+    isError: searchQuery.isError,
+    error: searchQuery.error,
+    refetch: searchQuery.refetch,
   };
 }

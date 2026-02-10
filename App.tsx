@@ -18,7 +18,7 @@ import IntroPage from './components/IntroPage';
 import { MOCK_LIVES } from './constants';
 
 const INTRO_STORAGE_KEY = 'yes-duty-free-intro-seen';
-import { useProducts } from './lib/hooks/useProducts';
+import { useProducts, useSearchProducts } from './lib/hooks/useProducts';
 import { useCategories } from './lib/hooks/useCategories';
 import { useAuth } from './lib/hooks/useAuth';
 import { useCart } from './lib/hooks/useCart';
@@ -39,6 +39,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [activeCategory, setActiveCategory] = useState<string | undefined>(undefined);
   const [activeSubCategory, setActiveSubCategory] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [myCoupons, setMyCoupons] = useState<Coupon[]>([]);
   const [showOrderComplete, setShowOrderComplete] = useState(false);
@@ -58,6 +59,7 @@ const App: React.FC = () => {
   const [error, setError] = useState('');
 
   const { products, isLoading: productsLoading } = useProducts();
+  const { products: searchResults, isLoading: searchLoading } = useSearchProducts(searchQuery);
   const { categories } = useCategories();
   const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
   const {
@@ -108,9 +110,9 @@ const App: React.FC = () => {
     setConfirmWishlistRemove(null);
   };
 
-  const handleCreateOrder = async (shippingAddressId: string, cartItemIds?: string[], usedPoints?: number) => {
+  const handleCreateOrder = async (shippingAddressId: string, cartItemIds?: string[], usedPoints?: number, userCouponId?: string) => {
     if (!user?.id || !cartId) throw new Error('로그인 후 장바구니에서 주문해 주세요.');
-    const order = await createOrder(user.id, { shippingAddressId, cartId, cartItemIds, paymentMethod: 'card', usedPoints });
+    const order = await createOrder(user.id, { shippingAddressId, cartId, cartItemIds, paymentMethod: 'card', usedPoints, userCouponId });
     await queryClient.invalidateQueries({ queryKey: ['cart'] });
     await queryClient.invalidateQueries({ queryKey: ['profile'] });
     await queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -142,6 +144,15 @@ const App: React.FC = () => {
     setCurrentPage(page);
     setActiveCategory(category);
     setActiveSubCategory(subCategory);
+    if (page !== 'search') setSearchQuery('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSearchSubmit = (query: string) => {
+    setSearchQuery(query.trim());
+    setCurrentPage('search');
+    setActiveCategory(undefined);
+    setActiveSubCategory(undefined);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -273,8 +284,31 @@ const App: React.FC = () => {
       onLogout={signOut}
       authLoading={authLoading}
       cartItemCount={cartItemCount}
+      onSearchSubmit={handleSearchSubmit}
     >
       {currentPage === 'home' && renderHome()}
+      {currentPage === 'search' && (
+        <div className="max-w-7xl mx-auto px-4 py-10">
+          <h2 className="text-2xl font-black text-gray-900 mb-2">
+            검색 결과 {searchQuery && <span className="text-red-600">&quot;{searchQuery}&quot;</span>}
+          </h2>
+          {!searchQuery.trim() ? (
+            <p className="text-gray-500 py-8">검색어를 입력해 주세요.</p>
+          ) : searchLoading ? (
+            <p className="text-gray-400 py-8">검색 중…</p>
+          ) : searchResults.length === 0 ? (
+            <p className="text-gray-500 py-8">검색 결과가 없습니다.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
+              {searchResults.map((p) => (
+                <div key={p.id} onClick={() => handleProductClick(p)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleProductClick(p)}>
+                  <ProductCard product={p} wishlist={user ? wishlistPropsFor(p) : undefined} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {currentPage === 'live' && (
         <div
           ref={liveScrollRef}

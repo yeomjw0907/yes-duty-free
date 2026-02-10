@@ -3,6 +3,7 @@ import { Product } from '../types';
 import { useProduct } from '../lib/hooks/useProducts';
 import { useAuth } from '../lib/hooks/useAuth';
 import { useWishlist, useWishlistCheck, useToggleWishlist } from '../lib/hooks/useWishlist';
+import { useReviews, useMyReview, useCreateReview } from '../lib/hooks/useReviews';
 import ProductCard from './ProductCard';
 import ConfirmModal from './ConfirmModal';
 
@@ -16,7 +17,8 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack, onAddToCart, onImmediatePurchase, onProductClick }) => {
-  const [activeTab, setActiveTab] = useState('상품설명');
+  const [activeTab, setActiveTab] = useState<'상품설명' | '리뷰' | '배송/교환/반품' | '커뮤니티'>('상품설명');
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', content: '' });
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [confirmWishlistRemove, setConfirmWishlistRemove] = useState<Product | null>(null);
@@ -27,6 +29,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
   const { isInWishlist } = useWishlistCheck(user?.id, displayProduct.id);
   const { toggle: toggleWishlist, isToggling: wishlistToggling } = useToggleWishlist(user?.id);
   const { wishlist } = useWishlist(user?.id);
+  const { reviews, loading: reviewsLoading, refetch: refetchReviews } = useReviews(displayProduct.id);
+  const { myReview, loading: myReviewLoading } = useMyReview(displayProduct.id, user?.id ?? null);
+  const { submit: submitReview, submitting: reviewSubmitting, error: reviewError } = useCreateReview(
+    displayProduct.id,
+    user?.id ?? null,
+    refetchReviews
+  );
   const getWishlistProps = (p: Product) => ({
     isInWishlist: wishlist.some((w) => w.id === p.id),
     onToggle: (e: React.MouseEvent) => {
@@ -171,36 +180,136 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
 
       <div className="border-y sticky top-16 bg-white z-40">
         <div className="max-w-7xl mx-auto px-4 flex gap-10">
-           {['상품설명', '리뷰 (142)', '배송/교환/반품', '커뮤니티'].map(tab => (
-             <button 
-              key={tab} 
-              onClick={() => setActiveTab(tab)}
-              className={`py-4 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-red-600 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+           {[
+             { id: '상품설명' as const, label: '상품설명' },
+             { id: '리뷰' as const, label: `리뷰 (${reviews.length})` },
+             { id: '배송/교환/반품' as const, label: '배송/교환/반품' },
+             { id: '커뮤니티' as const, label: '커뮤니티' },
+           ].map(({ id, label }) => (
+             <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`py-4 text-sm font-bold border-b-2 transition-all ${activeTab === id ? 'border-red-600 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
              >
-               {tab}
+               {label}
              </button>
            ))}
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="space-y-12">
-          <div className="text-center space-y-6">
-             <h2 className="text-3xl font-bold text-gray-900">당신의 피부를 위한 최고의 선택</h2>
-             <p className="text-lg text-gray-600 leading-relaxed">
-               전세계 면세점에서 가장 사랑받는 {displayProduct.brand}의 시그니처 아이템입니다.<br/>
-               현지 매장과 동일한 품질을 면세 가격 그대로 만나보세요.
-             </p>
-             <div className="aspect-[4/5] bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
-                <img src={`https://picsum.photos/seed/${displayProduct.id}detail/800/1000`} className="w-full h-full object-cover" alt="" />
-             </div>
-          </div>
-          
-          <div className="text-center py-10">
-             <button className="w-full py-4 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">스토리 더보기 ⌵</button>
+      {activeTab === '상품설명' && (
+        <div className="max-w-4xl mx-auto px-4 py-16">
+          <div className="space-y-12">
+            <div className="text-center space-y-6">
+               <h2 className="text-3xl font-bold text-gray-900">당신의 피부를 위한 최고의 선택</h2>
+               <p className="text-lg text-gray-600 leading-relaxed">
+                 전세계 면세점에서 가장 사랑받는 {displayProduct.brand}의 시그니처 아이템입니다.<br/>
+                 현지 매장과 동일한 품질을 면세 가격 그대로 만나보세요.
+               </p>
+               <div className="aspect-[4/5] bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
+                  <img src={`https://picsum.photos/seed/${displayProduct.id}detail/800/1000`} className="w-full h-full object-cover" alt="" />
+               </div>
+            </div>
+            <div className="text-center py-10">
+               <button className="w-full py-4 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">스토리 더보기 ⌵</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === '리뷰' && (
+        <div className="max-w-4xl mx-auto px-4 py-16">
+          <div className="space-y-10">
+            {user && !myReview && !myReviewLoading && (
+              <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-gray-900">리뷰 작성</h3>
+                <div>
+                  <span className="text-sm font-bold text-gray-700 block mb-2">평점</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewForm((f) => ({ ...f, rating: star }))}
+                        className={`p-1 ${reviewForm.rating >= star ? 'text-amber-400' : 'text-gray-300'}`}
+                        aria-label={`${star}점`}
+                      >
+                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-700 block mb-2">제목 (선택)</label>
+                  <input
+                    type="text"
+                    value={reviewForm.title}
+                    onChange={(e) => setReviewForm((f) => ({ ...f, title: e.target.value }))}
+                    placeholder="한 줄 요약"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-700 block mb-2">내용 *</label>
+                  <textarea
+                    value={reviewForm.content}
+                    onChange={(e) => setReviewForm((f) => ({ ...f, content: e.target.value }))}
+                    placeholder="상품 사용 후기를 남겨주세요."
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-gray-900 resize-none"
+                  />
+                </div>
+                {reviewError && <p className="text-sm text-red-600">{reviewError.message}</p>}
+                <button
+                  type="button"
+                  disabled={!reviewForm.content.trim() || reviewSubmitting}
+                  onClick={() => submitReview({ rating: reviewForm.rating, title: reviewForm.title || undefined, content: reviewForm.content.trim() })}
+                  className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {reviewSubmitting ? '등록 중…' : '리뷰 등록'}
+                </button>
+              </div>
+            )}
+            {!user && (
+              <p className="text-gray-500 py-4">로그인 후 리뷰를 작성할 수 있습니다.</p>
+            )}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">전체 리뷰</h3>
+              {reviewsLoading ? (
+                <p className="text-gray-400 py-8">리뷰를 불러오는 중…</p>
+              ) : reviews.length === 0 ? (
+                <p className="text-gray-400 py-8">아직 리뷰가 없습니다.</p>
+              ) : (
+                <ul className="space-y-6">
+                  {reviews.map((r) => (
+                    <li key={r.id} className="border-b border-gray-100 pb-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="flex gap-0.5 text-amber-400">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <svg key={i} className="w-4 h-4" fill={i <= r.rating ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 20 20"><path strokeWidth={1.5} d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                          ))}
+                        </span>
+                        <span className="text-sm font-bold text-gray-700">{r.user_name ?? '회원'}</span>
+                        {r.is_verified_purchase && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">구매확정</span>}
+                        <span className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                      {r.title && <p className="font-bold text-gray-900 mb-1">{r.title}</p>}
+                      <p className="text-gray-600 text-sm whitespace-pre-wrap">{r.content}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(activeTab === '배송/교환/반품' || activeTab === '커뮤니티') && (
+        <div className="max-w-4xl mx-auto px-4 py-16 text-gray-500">
+          {activeTab === '배송/교환/반품' && <p>배송·교환·반품 안내가 곧 제공됩니다.</p>}
+          {activeTab === '커뮤니티' && <p>커뮤니티는 준비 중입니다.</p>}
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 py-20 border-t border-gray-100 space-y-20">
         <section>

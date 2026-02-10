@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { CartItemWithProduct } from '../lib/api/cart';
 import type { UserProfile } from '../lib/api/users';
+import { getAvailableUserCoupons, computeCouponDiscount, claimCouponByCode } from '../lib/api/coupons';
+import type { UserCouponWithDetail } from '../types';
 import { TIER_RATES, SHIPPING_FEE_BASIC } from '../lib/constants/membership';
 import type { ShippingAddress } from '../types';
 
@@ -12,7 +14,7 @@ interface CheckoutPageProps {
   cartId: string | null;
   addresses: ShippingAddress[];
   defaultAddress: ShippingAddress | null;
-  onCreateOrder: (shippingAddressId: string, cartItemIds?: string[], usedPoints?: number) => Promise<void>;
+  onCreateOrder: (shippingAddressId: string, cartItemIds?: string[], usedPoints?: number, userCouponId?: string) => Promise<void>;
   onNavigateToLogin: () => void;
   onNavigateToPage: (page: string) => void;
 }
@@ -30,6 +32,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
 }) => {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(defaultAddress?.id ?? addresses[0]?.id ?? null);
   const [usedPoints, setUsedPoints] = useState(0);
+  const [availableCoupons, setAvailableCoupons] = useState<UserCouponWithDetail[]>([]);
+  const [selectedUserCouponId, setSelectedUserCouponId] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [claimingCoupon, setClaimingCoupon] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,11 +44,54 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const tier = profile?.membership_tier ?? 'basic';
   const shippingFee = tier === 'basic' ? SHIPPING_FEE_BASIC : 0;
   const subtotal = displayItems.reduce((sum, i) => sum + i.priceSnapshot * i.quantity, 0);
-  const maxUsablePoints = Math.min(profile?.points ?? 0, subtotal + shippingFee);
+  const orderAmountBeforeCoupon = subtotal + shippingFee;
+
+  const selectedCoupon = selectedUserCouponId ? availableCoupons.find((uc) => uc.id === selectedUserCouponId) : null;
+  const couponDiscount = selectedCoupon ? computeCouponDiscount(selectedCoupon.coupon, orderAmountBeforeCoupon) : 0;
+  const orderAmountAfterCoupon = Math.max(0, orderAmountBeforeCoupon - couponDiscount);
+  const maxUsablePoints = Math.min(profile?.points ?? 0, orderAmountAfterCoupon);
   const appliedPoints = Math.min(usedPoints, maxUsablePoints);
-  const totalAmount = Math.max(0, subtotal + shippingFee - appliedPoints);
+  const totalAmount = Math.max(0, orderAmountAfterCoupon - appliedPoints);
   const ratePercent = Math.round((TIER_RATES[tier] ?? 0.01) * 100);
   const estimatedPoints = Math.floor(totalAmount * (TIER_RATES[tier] ?? 0.01));
+
+  const fetchCoupons = useCallback(() => {
+    if (!user?.id || orderAmountBeforeCoupon <= 0) {
+      setAvailableCoupons([]);
+      setSelectedUserCouponId(null);
+      return;
+    }
+    getAvailableUserCoupons(user.id, orderAmountBeforeCoupon)
+      .then((list) => {
+        setAvailableCoupons(list);
+        setSelectedUserCouponId((prev) => (list.some((uc) => uc.id === prev) ? prev : null));
+      })
+      .catch(() => setAvailableCoupons([]));
+  }, [user?.id, orderAmountBeforeCoupon]);
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [fetchCoupons]);
+
+  const handleClaimCoupon = async () => {
+    if (!user?.id || !couponCode.trim()) return;
+    setClaimingCoupon(true);
+    setError('');
+    try {
+      const uc = await claimCouponByCode(user.id, couponCode.trim());
+      if (uc) {
+        setCouponCode('');
+        fetchCoupons();
+        setSelectedUserCouponId(uc.id);
+      } else {
+        setError('유효하지 않거나 이미 받은 쿠폰입니다.');
+      }
+    } catch {
+      setError('쿠폰 등록에 실패했습니다.');
+    } finally {
+      setClaimingCoupon(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -113,7 +162,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     setError('');
     setSubmitting(true);
     try {
-      await onCreateOrder(effectiveAddressId, buyNowCartItemIds ?? undefined);
+      await onCreateOrder(effectiveAddressId, undefined, appliedPoints, selectedUserCouponId ?? undefined);
       onNavigateToPage('order_complete');
     } catch (err) {
       console.error(err);
@@ -206,6 +255,68 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
               <span>배송비 {tier === 'basic' && '(Basic)'}</span>
               <span>{shippingFee === 0 ? '무료 (Premium/VIP)' : `${shippingFee.toLocaleString()}원`}</span>
             </div>
+            <div className="mt-2">
+              <span className="text-sm font-bold text-gray-700 block mb-2">쿠폰 코드</span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  placeholder="코드 입력"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleClaimCoupon}
+                  disabled={!couponCode.trim() || claimingCoupon}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {claimingCoupon ? '등록 중…' : '등록'}
+                </button>
+              </div>
+            </div>
+            {availableCoupons.length > 0 && (
+              <div className="mt-2">
+                <span className="text-sm font-bold text-gray-700 block mb-2">보유 쿠폰 선택</span>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="coupon"
+                      checked={!selectedUserCouponId}
+                      onChange={() => setSelectedUserCouponId(null)}
+                      className="text-red-600 border-gray-300 focus:ring-red-500"
+                    />
+                    <span className="text-sm text-gray-600">사용 안 함</span>
+                  </label>
+                  {availableCoupons.map((uc) => (
+                    <label key={uc.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="coupon"
+                        checked={selectedUserCouponId === uc.id}
+                        onChange={() => setSelectedUserCouponId(uc.id)}
+                        className="text-red-600 border-gray-300 focus:ring-red-500"
+                      />
+                      <span className="text-sm text-gray-900">
+                        {uc.coupon.title}
+                        {computeCouponDiscount(uc.coupon, orderAmountBeforeCoupon) > 0 && (
+                          <span className="text-red-600 ml-1">
+                            (-{computeCouponDiscount(uc.coupon, orderAmountBeforeCoupon).toLocaleString()}원)
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            {couponDiscount > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>쿠폰 할인</span>
+                <span>-{couponDiscount.toLocaleString()}원</span>
+              </div>
+            )}
             {maxUsablePoints > 0 && (
               <div className="flex justify-between items-center gap-2 mt-2">
                 <span className="text-sm text-gray-600">적립금 사용 (보유 {(profile?.points ?? 0).toLocaleString()}P)</span>
