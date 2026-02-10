@@ -27,13 +27,13 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
+  const signIn = async (email: string, password: string): Promise<{ error: AuthError | null; user?: User }> => {
     const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) return { error };
     if (data.user) {
       await updateLastLogin(data.user.id);
     }
-    return { error: null };
+    return { error: null, user: data.user };
   };
 
   const signUp = async (

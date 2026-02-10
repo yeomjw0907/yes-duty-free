@@ -37,6 +37,11 @@ export interface OrderRecord {
   payment_method: string;
   payment_status: string;
   paid_at: string | null;
+  courier_company?: string | null;
+  tracking_number?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
+  admin_memo?: string | null;
   created_at: string;
   updated_at: string;
 }

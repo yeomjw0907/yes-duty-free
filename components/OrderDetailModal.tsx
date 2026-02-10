@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { OrderWithItems } from '../lib/api/orders';
+import { getTrackingUrl } from '../lib/tracking';
 
 interface OrderDetailModalProps {
   order: OrderWithItems | null | undefined;
@@ -120,6 +121,33 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isLoading, o
             <p className="text-sm text-gray-700">{order.recipient_name} · {order.recipient_phone}</p>
             <p className="text-sm text-gray-600 break-words">{order.shipping_address}</p>
           </div>
+          {(order.tracking_number || order.courier_company) && (
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs font-bold text-gray-500 mb-2">배송 추적</p>
+              {order.courier_company && (
+                <p className="text-sm text-gray-700">택배사: <span className="font-medium text-gray-900">{order.courier_company}</span></p>
+              )}
+              {order.tracking_number && (
+                <p className="text-sm text-gray-700 mt-1">
+                  송장번호: <span className="font-mono font-medium text-gray-900 break-all">{order.tracking_number}</span>
+                </p>
+              )}
+              {(() => {
+                const url = getTrackingUrl(order.courier_company, order.tracking_number);
+                return url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-colors"
+                  >
+                    배송 조회
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  </a>
+                ) : null;
+              })()}
+            </div>
+          )}
             </>
           )}
         </div>

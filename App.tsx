@@ -27,6 +27,7 @@ import { useProfile } from './lib/hooks/useProfile';
 import { useOrders, useOrderDetail } from './lib/hooks/useOrders';
 import { useWishlist, useToggleWishlist } from './lib/hooks/useWishlist';
 import { createOrder } from './lib/api/orders';
+import { checkIsAdmin } from './lib/api/admin';
 import { useQueryClient } from '@tanstack/react-query';
 import { Product, CartItem, Coupon, Order, LiveStream } from './types';
 
@@ -172,13 +173,25 @@ const App: React.FC = () => {
     setLiveInitialIndex(null);
   }, [currentPage, liveInitialIndex]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin@onecation.co.kr' && password === 'admin123!') {
+    setError('');
+    const { error: signInError, user: signedInUser } = await signIn(email, password);
+    if (signInError) {
+      setError(signInError.message || '로그인 정보가 올바르지 않습니다.');
+      return;
+    }
+    if (!signedInUser?.id) {
+      setError('로그인에 실패했습니다.');
+      return;
+    }
+    const isAdmin = await checkIsAdmin(signedInUser.id);
+    if (isAdmin) {
       setIsAdminLoggedIn(true);
       setShowAdminLogin(false);
     } else {
-      setError('로그인 정보가 올바르지 않습니다.');
+      setError('관리자 계정이 아닙니다.');
+      await signOut();
     }
   };
 
@@ -270,7 +283,7 @@ const App: React.FC = () => {
     return <IntroPage onComplete={handleIntroComplete} />;
   }
 
-  if (isAdminLoggedIn) return <AdminPanel onClose={() => setIsAdminLoggedIn(false)} />;
+  if (isAdminLoggedIn) return <AdminPanel onClose={async () => { await signOut(); setIsAdminLoggedIn(false); }} />;
 
   return (
     <Layout
