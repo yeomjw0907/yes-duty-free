@@ -5,6 +5,11 @@ import type { Product } from '../types';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '../lib/api/users';
 import FooterModal from './FooterModal';
+import { useTranslation } from 'react-i18next';
+import { getSearchKeywords } from '../lib/api/insights';
+import { getLatestExchangeRates, type ExchangeRateRow } from '../lib/api/exchangeRates';
+import { ExchangeRateProvider } from '../lib/contexts/ExchangeRateContext';
+import { getProductDisplayName, getProductDisplayPrice } from '../lib/productLocale';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,20 +34,24 @@ const tierLabel = (tier: string) => (tier === 'vip' ? 'VIP' : tier === 'premium'
 type FooterModalType = 'notice' | 'faq' | 'inquiry' | 'customs' | 'countries' | 'terms' | 'privacy' | null;
 
 const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, products, productsLoading, activeCategory, user, profile, onLogout, authLoading, cartItemCount = 0, onSearchSubmit, onOpenAdminLogin }) => {
+  const { t, i18n } = useTranslation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [footerModal, setFooterModal] = useState<FooterModalType>(null);
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRateRow[]>([]);
   const isLiveMode = currentPage === 'live';
 
   const { categories } = useCategories();
   const categoryNames = categories.map((c) => c.name);
 
   const bottomNavItems = [
-    { id: 'all_categories', label: '카테고리', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /> },
-    { id: 'live', label: '라이브', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /> },
-    { id: 'home', label: '홈', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /> },
-    { id: 'deals', label: '특가', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /> },
-    { id: 'mypage', label: 'MY', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /> }
+    { id: 'all_categories', labelKey: 'nav.category', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /> },
+    { id: 'live', labelKey: 'nav.live', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /> },
+    { id: 'home', labelKey: 'nav.home', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /> },
+    { id: 'deals', labelKey: 'nav.deals', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /> },
+    { id: 'mypage', labelKey: 'nav.my', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /> }
   ];
 
   useEffect(() => {
@@ -53,7 +62,39 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
+  useEffect(() => {
+    if (!isLangOpen) return;
+    const onDocClick = () => setIsLangOpen(false);
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [isLangOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    getSearchKeywords(10)
+      .then((rows) => {
+        const list = (rows ?? [])
+          .map((r) => r.keyword)
+          .filter((k) => typeof k === 'string' && k.trim().length > 0)
+          .slice(0, 10);
+        setTrendingKeywords(list);
+      })
+      .catch(() => setTrendingKeywords([]));
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    getLatestExchangeRates(['USD', 'TWD'])
+      .then(setExchangeRates)
+      .catch(() => setExchangeRates([]));
+  }, []);
+
+  const twdRatePerKrw = (() => {
+    const r = exchangeRates.find((x) => x.currency_code === 'TWD');
+    return r != null && Number(r.rate) > 0 ? Number(r.rate) : null;
+  })();
+
   return (
+    <ExchangeRateProvider value={{ twdRatePerKrw }}>
     <div className={`min-h-screen flex flex-col ${isLiveMode ? 'bg-black text-white' : 'bg-[#fcfcfc] text-[#1a1a1a]'} pb-16 lg:pb-0`}>
       {/* Search Overlay */}
       {isSearchOpen && (
@@ -77,7 +118,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                     }
                   }
                 }}
-                placeholder="어떤 면세 혜택을 찾으시나요?"
+                placeholder={t('search.placeholder')}
                 className="flex-1 min-w-0 text-base sm:text-lg lg:text-3xl font-black outline-none bg-transparent placeholder:text-gray-200 transition-all text-gray-900"
               />
               <button
@@ -106,10 +147,21 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
 
             <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 min-w-0">
               <div className="lg:col-span-4 min-w-0">
-                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest italic mb-6 lg:mb-8">Trending Now</h3>
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest italic mb-6 lg:mb-8">{t('search.trendingTitle')}</h3>
                 <div className="space-y-5 lg:space-y-6">
-                  {['설화수 자음생 세트', '에어팟 프로 최저가', '조말론 블랙베리', '정관장 에브리타임', '위스키 오픈런 혜택'].map((keyword, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-3 group cursor-pointer min-w-0">
+                  {(trendingKeywords.length > 0 ? trendingKeywords : ['설화수 자음생 세트', '에어팟 프로 최저가', '조말론 블랙베리', '정관장 에브리타임', '위스키 오픈런 혜택']).map((keyword, idx) => (
+                    <div
+                      key={`${keyword}-${idx}`}
+                      className="flex items-center justify-between gap-3 group cursor-pointer min-w-0"
+                      onClick={() => {
+                        if (onSearchSubmit) {
+                          onSearchSubmit(keyword);
+                          setIsSearchOpen(false);
+                        } else {
+                          setSearchQuery(keyword);
+                        }
+                      }}
+                    >
                       <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
                         <span className="text-lg sm:text-xl font-black italic text-red-600 w-4 shrink-0 text-center">{idx + 1}</span>
                         <span className="text-sm sm:text-lg font-extrabold text-gray-800 group-hover:text-red-600 group-hover:translate-x-1 transition-all truncate">{keyword}</span>
@@ -133,16 +185,16 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                         <img 
                           src={product.imageUrl} 
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                          alt={product.name}
+                          alt={getProductDisplayName(product, i18n.language)}
                         />
                         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-600 text-white text-[8px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded shadow-lg">HOT</div>
                       </div>
                       <div className="px-0 sm:px-1 flex flex-col gap-1 min-w-0">
                         <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-tighter truncate">{product.brand}</p>
-                        <h4 className="text-[11px] sm:text-[13px] font-bold text-gray-800 line-clamp-2 leading-snug group-hover:text-red-600 transition-colors min-h-[2.5rem] sm:h-10">{product.name}</h4>
+                        <h4 className="text-[11px] sm:text-[13px] font-bold text-gray-800 line-clamp-2 leading-snug group-hover:text-red-600 transition-colors min-h-[2.5rem] sm:h-10">{getProductDisplayName(product, i18n.language)}</h4>
                         <div className="mt-0.5 flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
                           <span className="text-red-600 text-xs sm:text-sm font-black">{product.discount}%</span>
-                          <span className="text-gray-900 text-xs sm:text-sm font-black truncate">{product.price.toLocaleString()}원</span>
+                          <span className="text-gray-900 text-xs sm:text-sm font-black truncate">{(() => { const d = getProductDisplayPrice(product, i18n.language, twdRatePerKrw); return `${d.amount.toLocaleString()}${d.suffix}`; })()}</span>
                         </div>
                       </div>
                     </div>
@@ -174,6 +226,41 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
             </div>
             
             <div className="flex items-center gap-4">
+              <div className="relative hidden lg:block">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLangOpen((v) => !v);
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                    isLiveMode
+                      ? 'border-white/20 text-white/80 hover:text-white hover:bg-white/10'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  aria-label="언어"
+                >
+                  {i18n.language === 'zh-TW' ? '繁體中文' : 'KO'}
+                </button>
+                {isLangOpen && (
+                  <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => i18n.changeLanguage('ko')}
+                      className="w-full px-4 py-3 text-left text-sm font-bold hover:bg-gray-50"
+                    >
+                      {t('lang.ko')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => i18n.changeLanguage('zh-TW')}
+                      className="w-full px-4 py-3 text-left text-sm font-bold hover:bg-gray-50"
+                    >
+                      {t('lang.zhTW')}
+                    </button>
+                  </div>
+                )}
+              </div>
               <button 
                 onClick={() => setCurrentPage('cart')}
                 className={`relative p-2.5 rounded-full transition-all ${isLiveMode ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
@@ -261,7 +348,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
             className={`flex flex-col items-center gap-1 transition-all flex-1 py-1 ${currentPage === item.id ? 'text-red-600' : (isLiveMode ? 'text-white/30' : 'text-gray-300')}`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{item.icon}</svg>
-            <span className="text-[10px] font-black tracking-tight">{item.label}</span>
+            <span className="text-[10px] font-black tracking-tight">{t(item.labelKey)}</span>
           </button>
         ))}
       </div>
@@ -289,7 +376,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('notices'); }}>공지사항</li>
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('events'); }}>이벤트</li>
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('faq')}>자주 묻는 질문</li>
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('inquiry')}>1:1 문의하기</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('inquiries'); }}>1:1 문의하기</li>
                   </ul>
                 </div>
                 <div>
@@ -312,6 +399,16 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
             </div>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
               <span className="order-2 sm:order-1">© 2025 Onecation Co., Ltd. All rights reserved.</span>
+              {exchangeRates.length > 0 && (
+                <span className="order-3 sm:order-2 text-gray-500 normal-case tracking-normal">
+                  FX{' '}
+                  {exchangeRates.slice(0, 2).map((r) => (
+                    <span key={r.id} className="ml-2">
+                      {r.currency_code}: {Number(r.rate).toLocaleString()}
+                    </span>
+                  ))}
+                </span>
+              )}
               <div className="flex gap-6 sm:gap-8 order-1 sm:order-2">
                 {onOpenAdminLogin && (
                   <span className="hover:text-white cursor-pointer transition-colors" onClick={onOpenAdminLogin}>관리자</span>
@@ -340,11 +437,6 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
             <p>주문서(결제) 단계에서 사용 가능 적립금을 입력하시면 결제 금액에서 차감됩니다.</p>
           </div>
         </div>
-      </FooterModal>
-      <FooterModal open={footerModal === 'inquiry'} title="1:1 문의하기" onClose={() => setFooterModal(null)}>
-        <p className="mb-4">1:1 문의는 아래 이메일로 보내주시면 순차적으로 답변 드리겠습니다.</p>
-        <p className="font-bold text-gray-900">admin@onecation.co.kr</p>
-        <p className="mt-4 text-gray-500 text-xs">문의 시 주문번호, 회원 이메일을 함께 적어주시면 더 빠른 처리가 가능합니다.</p>
       </FooterModal>
       <FooterModal open={footerModal === 'customs'} title="통관 안내" onClose={() => setFooterModal(null)}>
         <p className="mb-4">해외 직구·면세 구매 시 통관 관련 안내입니다.</p>
@@ -385,6 +477,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
         <p className="mt-6 text-gray-400 text-xs">전문은 추후 업데이트됩니다.</p>
       </FooterModal>
     </div>
+    </ExchangeRateProvider>
   );
 };
 

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { User } from '@supabase/supabase-js';
 import type { CartItemWithProduct } from '../lib/api/cart';
 import type { Product } from '../types';
+import { getProductDisplayName } from '../lib/productLocale';
 import ConfirmModal from './ConfirmModal';
 
 interface CartPageProps {
@@ -25,6 +27,7 @@ const CartPage: React.FC<CartPageProps> = ({
   onNavigateToPage,
   onProductClick,
 }) => {
+  const { i18n } = useTranslation();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<CartItemWithProduct | null>(null);
@@ -128,12 +131,12 @@ const CartPage: React.FC<CartPageProps> = ({
               onClick={() => onProductClick(item.product)}
               className="flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-gray-50 border border-gray-100"
             >
-              <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+              <img src={item.product.imageUrl} alt={getProductDisplayName(item.product, i18n.language)} className="w-full h-full object-cover" />
             </button>
             <div className="flex-grow min-w-0">
               <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{item.product.brand}</p>
               <button type="button" onClick={() => onProductClick(item.product)} className="text-left">
-                <h3 className="font-bold text-gray-900 line-clamp-2 hover:text-red-600 transition-colors">{item.product.name}</h3>
+                <h3 className="font-bold text-gray-900 line-clamp-2 hover:text-red-600 transition-colors">{getProductDisplayName(item.product, i18n.language)}</h3>
               </button>
               {Object.keys(item.selectedOptions).length > 0 && (
                 <p className="text-xs text-gray-500 mt-0.5">

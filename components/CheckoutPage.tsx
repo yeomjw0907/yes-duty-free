@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { User } from '@supabase/supabase-js';
 import type { CartItemWithProduct } from '../lib/api/cart';
+import { getProductDisplayName } from '../lib/productLocale';
 import type { UserProfile } from '../lib/api/users';
 import { getAvailableUserCoupons, computeCouponDiscount, claimCouponByCode } from '../lib/api/coupons';
 import type { UserCouponWithDetail } from '../types';
@@ -30,6 +32,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
   onNavigateToLogin,
   onNavigateToPage,
 }) => {
+  const { i18n } = useTranslation();
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(defaultAddress?.id ?? addresses[0]?.id ?? null);
   const [usedPoints, setUsedPoints] = useState(0);
   const [availableCoupons, setAvailableCoupons] = useState<UserCouponWithDetail[]>([]);
@@ -222,11 +225,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
             {displayItems.map((item) => (
               <div key={item.id} className="flex gap-4 py-3 border-b border-gray-100 last:border-0">
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
-                  <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                  <img src={item.product.imageUrl} alt={getProductDisplayName(item.product, i18n.language)} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-gray-400 uppercase">{item.product.brand}</p>
-                  <p className="font-bold text-gray-900 line-clamp-2">{item.product.name}</p>
+                  <p className="font-bold text-gray-900 line-clamp-2">{getProductDisplayName(item.product, i18n.language)}</p>
                   {Object.keys(item.selectedOptions).length > 0 && (
                     <p className="text-xs text-gray-500 mt-0.5">
                       {Object.entries(item.selectedOptions).map(([k, v]) => `${k}: ${v}`).join(' / ')}

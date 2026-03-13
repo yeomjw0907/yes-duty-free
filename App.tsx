@@ -16,6 +16,9 @@ import OrderDetailModal from './components/OrderDetailModal';
 import ConfirmModal from './components/ConfirmModal';
 import IntroPage from './components/IntroPage';
 import MainPopupModal from './components/MainPopupModal';
+import NotFoundPage from './components/NotFoundPage';
+import PointHistoryPage from './components/PointHistoryPage';
+import InquiriesPage from './components/InquiriesPage';
 import { getPopupEvents, getEvents, getEventById } from './lib/api/events';
 import { isPopupDismissedToday } from './components/MainPopupModal';
 import type { EventRow } from './types';
@@ -32,6 +35,7 @@ import { useOrders, useOrderDetail } from './lib/hooks/useOrders';
 import { useWishlist, useToggleWishlist } from './lib/hooks/useWishlist';
 import { createOrder } from './lib/api/orders';
 import { checkIsAdmin } from './lib/api/admin';
+import { claimCouponByCode } from './lib/api/coupons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Product, CartItem, Coupon, Order, LiveStream } from './types';
 
@@ -126,10 +130,14 @@ const App: React.FC = () => {
 
   const handleCreateOrder = async (shippingAddressId: string, cartItemIds?: string[], usedPoints?: number, userCouponId?: string) => {
     if (!user?.id || !cartId) throw new Error('로그인 후 장바구니에서 주문해 주세요.');
+    const isFirstOrder = (myOrders?.length ?? 0) === 0;
     const order = await createOrder(user.id, { shippingAddressId, cartId, cartItemIds, paymentMethod: 'card', usedPoints, userCouponId });
     await queryClient.invalidateQueries({ queryKey: ['cart'] });
     await queryClient.invalidateQueries({ queryKey: ['profile'] });
     await queryClient.invalidateQueries({ queryKey: ['orders'] });
+    if (isFirstOrder) {
+      claimCouponByCode(user.id, 'FIRSTORDER5000').catch(() => {});
+    }
     setOrderCompleteNumber(order.order_number);
   };
 
@@ -152,6 +160,30 @@ const App: React.FC = () => {
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
+
+  const KNOWN_PAGES = new Set([
+    'home',
+    'search',
+    'live',
+    'all_categories',
+    'category',
+    'mypage',
+    'addresses',
+    'login',
+    'signup',
+    'detail',
+    'cart',
+    'checkout',
+    'order_complete',
+    'deals',
+    'best',
+    'notices',
+    'notice-detail',
+    'events',
+    'event-detail',
+    'points',
+    'inquiries',
+  ]);
   
   const navigateToPage = (page: string, category?: string, subCategory?: string) => {
     setCurrentPage(page);
@@ -534,6 +566,20 @@ const App: React.FC = () => {
             </button>
             <button
               type="button"
+              onClick={() => navigateToPage('points')}
+              className="px-6 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 hover:border-emerald-200 hover:text-emerald-700 transition-all"
+            >
+              💰 포인트 내역
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateToPage('inquiries')}
+              className="px-6 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 hover:border-indigo-200 hover:text-indigo-700 transition-all"
+            >
+              💬 1:1 문의
+            </button>
+            <button
+              type="button"
               onClick={() => setShowTierBenefitsModal(true)}
               className="px-6 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 hover:border-amber-200 hover:text-amber-700 transition-all"
             >
@@ -597,6 +643,23 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+      {currentPage === 'points' && (
+        <PointHistoryPage
+          user={user ?? null}
+          profile={profile ?? null}
+          orders={myOrders}
+          isLoading={ordersLoading}
+          onNavigateToLogin={() => navigateToPage('login')}
+          onBack={() => navigateToPage('mypage')}
+        />
+      )}
+      {currentPage === 'inquiries' && (
+        <InquiriesPage
+          user={user ?? null}
+          onNavigateToLogin={() => navigateToPage('login')}
+          onBack={() => navigateToPage('mypage')}
+        />
       )}
       {showTierBenefitsModal && <TierBenefitsModal onClose={() => setShowTierBenefitsModal(false)} />}
       {showMainPopup && popupEvents.length > 0 && popupEvents[popupIndex] && (
@@ -818,6 +881,10 @@ const App: React.FC = () => {
             </article>
           )}
         </div>
+      )}
+
+      {!KNOWN_PAGES.has(currentPage) && (
+        <NotFoundPage onGoHome={() => navigateToPage('home')} />
       )}
 
       {/* Admin Login Dialog */}

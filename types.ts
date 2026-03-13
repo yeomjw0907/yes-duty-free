@@ -35,6 +35,14 @@ export interface Product {
   stockQuantity?: number;
   /** 무제한 재고 여부 */
   isUnlimitedStock?: boolean;
+  /** 繁體中文(대만) 상품명 */
+  nameZh?: string | null;
+  /** 繁體中文 상품 요약 */
+  descriptionZh?: string | null;
+  /** 繁體中文 상세 HTML */
+  detailHtmlZh?: string | null;
+  /** 대만 판매가(TWD). 없으면 원화 환산 표시 */
+  priceTwd?: number | null;
 }
 
 export interface CartItem extends Product {

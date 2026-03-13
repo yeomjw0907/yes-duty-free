@@ -122,6 +122,10 @@ export interface AdminProductRow {
   categories: { name: string } | null;
   description: string | null;
   detail_html: string | null;
+  name_zh: string | null;
+  description_zh: string | null;
+  detail_html_zh: string | null;
+  price_twd: number | null;
 }
 
 export interface AdminProductCreate {
@@ -137,6 +141,10 @@ export interface AdminProductCreate {
   is_active?: boolean;
   description?: string | null;
   detail_html?: string | null;
+  name_zh?: string | null;
+  description_zh?: string | null;
+  detail_html_zh?: string | null;
+  price_twd?: number | null;
 }
 
 export interface AdminProductUpdate {
@@ -152,6 +160,10 @@ export interface AdminProductUpdate {
   is_active?: boolean;
   description?: string | null;
   detail_html?: string | null;
+  name_zh?: string | null;
+  description_zh?: string | null;
+  detail_html_zh?: string | null;
+  price_twd?: number | null;
 }
 
 /**
@@ -163,7 +175,7 @@ export async function getAdminProducts(opts?: {
 }): Promise<AdminProductRow[]> {
   let query = getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, stock_quantity, is_active, discount, created_at, description, detail_html, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, stock_quantity, is_active, discount, created_at, description, detail_html, name_zh, description_zh, detail_html_zh, price_twd, categories(name)')
     .order('created_at', { ascending: false });
 
   if (opts?.categoryId) {
@@ -199,6 +211,10 @@ export async function createAdminProduct(p: AdminProductCreate): Promise<AdminPr
     is_active: p.is_active ?? true,
     description: p.description ?? null,
     detail_html: p.detail_html ?? null,
+    name_zh: p.name_zh ?? null,
+    description_zh: p.description_zh ?? null,
+    detail_html_zh: p.detail_html_zh ?? null,
+    price_twd: p.price_twd ?? null,
   };
   const { data, error } = await getSupabase().from('products').insert(row).select().single();
   if (error) {
@@ -225,6 +241,10 @@ export async function updateAdminProduct(id: string, p: AdminProductUpdate): Pro
   if (p.is_active !== undefined) row.is_active = p.is_active;
   if (p.description !== undefined) row.description = p.description;
   if (p.detail_html !== undefined) row.detail_html = p.detail_html;
+  if (p.name_zh !== undefined) row.name_zh = p.name_zh;
+  if (p.description_zh !== undefined) row.description_zh = p.description_zh;
+  if (p.detail_html_zh !== undefined) row.detail_html_zh = p.detail_html_zh;
+  if (p.price_twd !== undefined) row.price_twd = p.price_twd;
 
   const { error } = await getSupabase().from('products').update(row).eq('id', id);
   if (error) {

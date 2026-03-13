@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { COUNTRY_OPTIONS, PHONE_COUNTRY_OPTIONS } from '../lib/constants/address';
 import type { ShippingAddressInput } from '../lib/api/shippingAddresses';
+import { claimCouponByCode } from '../lib/api/coupons';
 
 /** 다음(카카오) 우편번호 API 선택 결과 타입 */
 interface DaumPostcodeData {
@@ -28,7 +29,7 @@ interface SignupPageProps {
     email: string,
     password: string,
     options?: { name?: string; phone?: string; address?: ShippingAddressInput }
-  ) => Promise<{ error: { message: string } | null }>;
+  ) => Promise<{ error: { message: string } | null; userId?: string }>;
 }
 
 const emptyAddress = {
@@ -106,7 +107,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
     };
     setLoading(true);
     try {
-      const { error: err } = await onSignUp(formData.email, formData.password, {
+      const { error: err, userId } = await onSignUp(formData.email, formData.password, {
         name: formData.name,
         phone: fullPhone,
         address: addressPayload,
@@ -114,6 +115,9 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
       if (err) {
         setError(err.message === 'User already registered' ? '이미 가입된 이메일입니다.' : err.message);
         return;
+      }
+      if (userId) {
+        claimCouponByCode(userId, 'WELCOME3000').catch(() => {});
       }
       onSignupSuccess();
     } catch (e) {

@@ -1,0 +1,18 @@
+{
+  "lang.ko": "한국어",
+  "lang.zhTW": "繁體中文",
+  "nav.home": "홈",
+  "nav.category": "카테고리",
+  "nav.live": "라이브",
+  "nav.deals": "특가",
+  "nav.my": "MY",
+  "search.placeholder": "어떤 면세 혜택을 찾으시나요?",
+  "search.trendingTitle": "Trending Now",
+  "notFound.title": "페이지를 찾을 수 없습니다",
+  "notFound.desc": "요청하신 페이지가 없거나 이동되었습니다.",
+  "actions.goHome": "홈으로",
+  "mypage.pointsHistory": "💰 포인트 내역",
+  "mypage.addresses": "📍 배송지 관리",
+  "mypage.tierBenefits": "🏆 등급별 혜택 보기"
+}
+

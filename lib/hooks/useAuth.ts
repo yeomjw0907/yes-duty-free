@@ -74,7 +74,7 @@ export function useAuth() {
     email: string,
     password: string,
     options?: { name?: string; phone?: string; address?: ShippingAddressInput }
-  ): Promise<{ error: AuthError | null }> => {
+  ): Promise<{ error: AuthError | null; userId?: string }> => {
     const { data, error } = await getSupabase().auth.signUp({ email, password });
     if (error) return { error };
     if (data.user) {
@@ -87,6 +87,7 @@ export function useAuth() {
       if (options?.address) {
         await createShippingAddress(data.user.id, { ...options.address, is_default: true });
       }
+      return { error: null, userId: data.user.id };
     }
     return { error: null };
   };

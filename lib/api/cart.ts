@@ -19,6 +19,8 @@ interface CartItemRow {
     image_url: string;
     stock_quantity?: number;
     is_unlimited_stock?: boolean;
+    name_zh?: string | null;
+    price_twd?: number | null;
     categories?: { name: string } | null;
     category?: { name: string } | null;
   } | null;
@@ -31,6 +33,8 @@ interface CartItemRow {
     image_url: string;
     stock_quantity?: number;
     is_unlimited_stock?: boolean;
+    name_zh?: string | null;
+    price_twd?: number | null;
     categories?: { name: string } | null;
     category?: { name: string } | null;
   } | null;
@@ -71,6 +75,8 @@ function mapCartItem(row: CartItemRow): CartItemWithProduct | null {
       discount: 0,
       stockQuantity: p.stock_quantity ?? 0,
       isUnlimitedStock: p.is_unlimited_stock ?? false,
+      nameZh: p.name_zh ?? undefined,
+      priceTwd: p.price_twd ?? undefined,
     },
   };
 }
@@ -108,7 +114,7 @@ export async function getCartItems(cartId: string): Promise<CartItemWithProduct[
     .from('cart_items')
     .select(`
       id, cart_id, product_id, quantity, selected_options, price_snapshot,
-      products (id, name, brand, price, original_price, image_url, stock_quantity, is_unlimited_stock, categories(name))
+      products (id, name, brand, price, original_price, image_url, stock_quantity, is_unlimited_stock, name_zh, price_twd, categories(name))
     `)
     .eq('cart_id', cartId)
     .order('created_at', { ascending: false });

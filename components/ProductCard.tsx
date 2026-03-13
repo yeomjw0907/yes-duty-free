@@ -1,6 +1,8 @@
-
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '../types';
+import { useExchangeRate } from '../lib/contexts/ExchangeRateContext';
+import { getProductDisplayName, getProductDisplayPrice } from '../lib/productLocale';
 
 export interface WishlistProps {
   isInWishlist: boolean;
@@ -14,12 +16,22 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
+  const { i18n } = useTranslation();
+  const { twdRatePerKrw } = useExchangeRate();
+  const displayName = getProductDisplayName(product, i18n.language);
+  const displayPrice = getProductDisplayPrice(product, i18n.language, twdRatePerKrw);
+  const isZh = i18n.language === 'zh-TW';
+  const originalAmount = isZh && (product.priceTwd != null ? true : twdRatePerKrw)
+    ? (product.priceTwd != null ? Math.round((product.originalPrice / product.price) * product.priceTwd) : Math.round(product.originalPrice / twdRatePerKrw!))
+    : product.originalPrice;
+  const originalSuffix = isZh ? '元' : '원';
+
   return (
     <div className="flex flex-col gap-4 group cursor-pointer bg-white p-2 rounded-2xl border border-transparent hover:border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300">
       <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-50">
         <img 
           src={product.imageUrl} 
-          alt={product.name}
+          alt={displayName}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
         {!product.isUnlimitedStock && (product.stockQuantity ?? 0) <= 0 && (
@@ -71,12 +83,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
           </div>
         </div>
         <h3 className="text-[15px] font-bold text-gray-800 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors">
-          {product.name}
+          {displayName}
         </h3>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-red-600 font-black text-xl">{product.discount}%</span>
-          <span className="text-gray-900 font-black text-xl">{(product.price).toLocaleString()}원</span>
-          <span className="text-gray-300 line-through text-xs font-medium">{(product.originalPrice).toLocaleString()}</span>
+          <span className="text-gray-900 font-black text-xl">{displayPrice.amount.toLocaleString()}{displayPrice.suffix}</span>
+          <span className="text-gray-300 line-through text-xs font-medium">{originalAmount.toLocaleString()}{originalSuffix}</span>
         </div>
       </div>
     </div>

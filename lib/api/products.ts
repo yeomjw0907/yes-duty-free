@@ -21,6 +21,10 @@ interface ProductRow {
   detail_html?: string | null;
   stock_quantity?: number;
   is_unlimited_stock?: boolean;
+  name_zh?: string | null;
+  description_zh?: string | null;
+  detail_html_zh?: string | null;
+  price_twd?: number | null;
 }
 
 /** product_options 테이블 행 */
@@ -48,6 +52,10 @@ function mapRowToProduct(row: ProductRow): Product {
     detailHtml: row.detail_html ?? undefined,
     stockQuantity: row.stock_quantity ?? 0,
     isUnlimitedStock: row.is_unlimited_stock ?? false,
+    nameZh: row.name_zh ?? undefined,
+    descriptionZh: row.description_zh ?? undefined,
+    detailHtmlZh: row.detail_html_zh ?? undefined,
+    priceTwd: row.price_twd ?? undefined,
   };
 }
 
@@ -66,7 +74,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
 
   const { data, error } = await getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, stock_quantity, is_unlimited_stock, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, stock_quantity, is_unlimited_stock, name_zh, description_zh, detail_html_zh, price_twd, categories(name)')
     .eq('is_active', true)
     .or(`name.ilike.${pattern},brand.ilike.${pattern}`)
     .order('sold_count', { ascending: false });
@@ -85,7 +93,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
 export async function getProducts(categoryName?: string): Promise<Product[]> {
   let query = getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, stock_quantity, is_unlimited_stock, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, stock_quantity, is_unlimited_stock, name_zh, description_zh, detail_html_zh, price_twd, categories(name)')
     .eq('is_active', true);
 
   if (categoryName) {
@@ -110,7 +118,7 @@ export async function getProducts(categoryName?: string): Promise<Product[]> {
 export async function getProductById(id: string): Promise<Product | null> {
   const { data: productRow, error: productError } = await getSupabase()
     .from('products')
-    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, description, detail_html, stock_quantity, is_unlimited_stock, categories(name)')
+    .select('id, name, brand, price, original_price, image_url, category_id, sub_category, tags, sold_count, discount, description, detail_html, stock_quantity, is_unlimited_stock, name_zh, description_zh, detail_html_zh, price_twd, categories(name)')
     .eq('id', id)
     .eq('is_active', true)
     .single();

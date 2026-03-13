@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '../types';
 import { useProduct } from '../lib/hooks/useProducts';
+import { useExchangeRate } from '../lib/contexts/ExchangeRateContext';
+import { getProductDisplayName, getProductDisplayPrice, getProductDisplayDetailHtml } from '../lib/productLocale';
 import { useAuth } from '../lib/hooks/useAuth';
 import { useWishlist, useWishlistCheck, useToggleWishlist } from '../lib/hooks/useWishlist';
 import { useReviews, useMyReview, useCreateReview } from '../lib/hooks/useReviews';
@@ -69,12 +72,23 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
   const relatedProducts = products.filter(p => p.category === displayProduct.category && p.id !== displayProduct.id).slice(0, 4);
   const bestProducts = products.slice(0, 4);
 
+  const { i18n } = useTranslation();
+  const { twdRatePerKrw } = useExchangeRate();
+  const displayName = getProductDisplayName(displayProduct, i18n.language);
+  const displayPrice = getProductDisplayPrice(displayProduct, i18n.language, twdRatePerKrw);
+  const displayDetailHtml = getProductDisplayDetailHtml(displayProduct, i18n.language);
+  const isZh = i18n.language === 'zh-TW';
+  const originalAmount = isZh && (displayProduct.priceTwd != null ? true : twdRatePerKrw)
+    ? (displayProduct.priceTwd != null ? Math.round((displayProduct.originalPrice / displayProduct.price) * displayProduct.priceTwd) : Math.round(displayProduct.originalPrice / twdRatePerKrw!))
+    : displayProduct.originalPrice;
+  const originalSuffix = isZh ? '元' : '원';
+
   return (
     <div className="bg-white min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-12 gap-12">
         <div className="md:col-span-7 space-y-4">
           <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-            <img src={displayProduct.imageUrl} className="w-full h-full object-cover" alt={displayProduct.name} />
+            <img src={displayProduct.imageUrl} className="w-full h-full object-cover" alt={displayName} />
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
@@ -94,7 +108,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
           
           <div className="flex items-start justify-between gap-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight flex-1">
-              {displayProduct.name}
+              {displayName}
             </h1>
             {user ? (
               <button
@@ -118,8 +132,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
           <div className="flex flex-col gap-1 py-4 border-y border-gray-50">
             <div className="flex items-center gap-2">
               <span className="text-3xl font-bold text-red-600">{displayProduct.discount}%</span>
-              <span className="text-3xl font-bold text-gray-900">{displayProduct.price.toLocaleString()}원</span>
-              <span className="text-gray-400 line-through text-sm ml-2">{displayProduct.originalPrice.toLocaleString()}원</span>
+              <span className="text-3xl font-bold text-gray-900">{displayPrice.amount.toLocaleString()}{displayPrice.suffix}</span>
+              <span className="text-gray-400 line-through text-sm ml-2">{originalAmount.toLocaleString()}{originalSuffix}</span>
             </div>
             <p className="text-xs text-blue-500 font-bold mt-1">
                면세 혜택가 적용 완료 (해외배송 전용)
@@ -176,7 +190,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
              </div>
              <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
                 <span className="text-sm font-bold text-gray-900">총 결제 금액</span>
-                <span className="text-xl font-bold text-red-600">{(displayProduct.price * effectiveQuantity).toLocaleString()}원</span>
+                <span className="text-xl font-bold text-red-600">
+                  {isZh && (displayProduct.priceTwd != null || twdRatePerKrw)
+                    ? (displayProduct.priceTwd != null ? (displayProduct.priceTwd * effectiveQuantity).toLocaleString() : Math.round((displayProduct.price * effectiveQuantity) / twdRatePerKrw!).toLocaleString()) + '元'
+                    : (displayProduct.price * effectiveQuantity).toLocaleString() + '원'}
+                </span>
              </div>
           </div>
 
@@ -220,10 +238,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
 
       {activeTab === '상품설명' && (
         <div className="max-w-4xl mx-auto px-4 py-16">
-          {displayProduct.detailHtml?.trim() ? (
+          {(displayDetailHtml ?? displayProduct.detailHtml)?.trim() ? (
             <div
               className="product-detail-html text-gray-700 leading-relaxed [&_img]:max-w-full [&_img]:rounded-lg [&_p]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-2"
-              dangerouslySetInnerHTML={{ __html: displayProduct.detailHtml }}
+              dangerouslySetInnerHTML={{ __html: (displayDetailHtml ?? displayProduct.detailHtml) ?? '' }}
             />
           ) : (
             <div className="space-y-12">

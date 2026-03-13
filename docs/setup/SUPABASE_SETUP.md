@@ -57,9 +57,6 @@
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGc...
 
-# Gemini AI (기존)
-VITE_GEMINI_API_KEY=your-gemini-api-key
-
 # App
 VITE_APP_URL=http://localhost:3001
 ```

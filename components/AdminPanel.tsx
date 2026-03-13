@@ -55,6 +55,7 @@ import type { EventRow } from '../types';
 import type { LiveStreamRow } from '../types';
 import type { BannerRow } from '../types';
 import { uploadProductImage, uploadDetailImage, uploadEventImage, uploadLiveThumbnail, uploadBannerImage } from '../lib/upload';
+import { getAllInquiries, replyToInquiry, type InquiryRow } from '../lib/api/inquiries';
 
 const COURIER_OPTIONS = ['', 'CJ대한통운', '한진택배', '롯데택배', 'DHL', 'FedEx', 'UPS', 'EMS'];
 
@@ -94,6 +95,10 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     stock_quantity: 0,
     is_active: true,
     detail_html: '',
+    name_zh: '',
+    description_zh: '',
+    detail_html_zh: '',
+    price_twd: null,
   });
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [stockEdit, setStockEdit] = useState<Record<string, number>>({});
@@ -241,6 +246,13 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [insightsTrendData, setInsightsTrendData] = useState<DailyTrendRow[]>([]);
   const [insightsTrendLoading, setInsightsTrendLoading] = useState(false);
 
+  // 1:1 문의 관리
+  const [inquiries, setInquiries] = useState<InquiryRow[]>([]);
+  const [inquiriesLoading, setInquiriesLoading] = useState(false);
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replySaving, setReplySaving] = useState(false);
+
   const menuItems = [
     { id: 'dashboard', label: '대시보드' },
     { id: 'orders', label: '주문/해외배송 관리' },
@@ -249,6 +261,7 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     { id: 'notices', label: '공지/이벤트 관리' },
     { id: 'live', label: '라이브 방송 관리' },
     { id: 'banners', label: '배너 관리' },
+    { id: 'inquiries', label: '1:1 문의 관리' },
     { id: 'insights', label: '인사이트 관리' },
     { id: 'coupons', label: '글로벌 쿠폰 관리' },
     { id: 'reviews', label: '리뷰 관리' },
@@ -937,6 +950,10 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       stock_quantity: 0,
       is_active: true,
       detail_html: '',
+      name_zh: '',
+      description_zh: '',
+      detail_html_zh: '',
+      price_twd: null,
     });
     setProductModal('add');
     setImageError(null);
@@ -956,6 +973,10 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       is_active: product.is_active,
       id: product.id,
       detail_html: product.detail_html ?? '',
+      name_zh: product.name_zh ?? '',
+      description_zh: product.description_zh ?? '',
+      detail_html_zh: product.detail_html_zh ?? '',
+      price_twd: product.price_twd ?? null,
     });
     setProductModal({ type: 'edit', product });
     setImageError(null);
@@ -1029,6 +1050,10 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           stock_quantity: productForm.stock_quantity ?? 0,
           is_active: productForm.is_active ?? true,
           detail_html: productForm.detail_html?.trim() || null,
+          name_zh: productForm.name_zh?.trim() || null,
+          description_zh: productForm.description_zh?.trim() || null,
+          detail_html_zh: productForm.detail_html_zh?.trim() || null,
+          price_twd: productForm.price_twd ?? null,
         });
       } else if (productModal?.type === 'edit' && id) {
         await updateAdminProduct(id, {
@@ -1043,6 +1068,10 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           stock_quantity: productForm.stock_quantity,
           is_active: productForm.is_active,
           detail_html: productForm.detail_html?.trim() || null,
+          name_zh: productForm.name_zh?.trim() || null,
+          description_zh: productForm.description_zh?.trim() || null,
+          detail_html_zh: productForm.detail_html_zh?.trim() || null,
+          price_twd: productForm.price_twd ?? null,
         });
       }
       setProductModal(null);
@@ -1536,6 +1565,60 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   className="rounded border-gray-300"
                 />
                 <label htmlFor="product-is-active" className="text-sm font-bold text-gray-700">노출 (사이트에 표시)</label>
+              </div>
+
+              {/* 繁體中文 (대만) 버전 — 한국·대만 그룹으로 같은 상품 두 언어 관리 */}
+              <div className="border-t border-gray-200 pt-6 mt-4">
+                <h4 className="text-sm font-black text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">TW</span>
+                 繁體中文 (대만)
+                </h4>
+                <p className="text-[10px] text-gray-500 font-bold mb-3">대만 사용자에게 표시할 내용. 비워두면 한국어 버전이 그대로 표시됩니다.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">상품명 (繁)</label>
+                    <input
+                      type="text"
+                      value={productForm.name_zh ?? ''}
+                      onChange={(e) => setProductForm((prev) => ({ ...prev, name_zh: e.target.value }))}
+                      placeholder="예: 棕色瓶進階修護 50ml"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">요약 (繁)</label>
+                    <input
+                      type="text"
+                      value={productForm.description_zh ?? ''}
+                      onChange={(e) => setProductForm((prev) => ({ ...prev, description_zh: e.target.value }))}
+                      placeholder="대만어 상품 요약"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">판매가 (TWD)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={productForm.price_twd ?? ''}
+                        onChange={(e) => setProductForm((prev) => ({ ...prev, price_twd: e.target.value === '' ? null : parseInt(e.target.value, 10) || 0 }))}
+                        placeholder="비우면 원화 환산"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">상세 HTML (繁)</label>
+                    <textarea
+                      value={productForm.detail_html_zh ?? ''}
+                      onChange={(e) => setProductForm((prev) => ({ ...prev, detail_html_zh: e.target.value }))}
+                      placeholder="대만어 상세 내용 (HTML)"
+                      rows={4}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -2709,6 +2792,130 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     </div>
   );
 
+  const fetchInquiries = useCallback(async () => {
+    setInquiriesLoading(true);
+    try {
+      const list = await getAllInquiries();
+      setInquiries(list);
+      setSelectedInquiryId((prev) => (list.some((q) => q.id === prev) ? prev : (list[0]?.id ?? null)));
+    } catch (e) {
+      console.error(e);
+      setInquiries([]);
+      setSelectedInquiryId(null);
+    } finally {
+      setInquiriesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'inquiries') fetchInquiries();
+  }, [activeTab, fetchInquiries]);
+
+  const selectedInquiry = selectedInquiryId ? inquiries.find((q) => q.id === selectedInquiryId) : null;
+
+  useEffect(() => {
+    if (!selectedInquiry) {
+      setReplyText('');
+      return;
+    }
+    setReplyText(selectedInquiry.admin_reply ?? '');
+  }, [selectedInquiryId, inquiries]);
+
+  const renderInquiries = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="lg:col-span-5 bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-lg font-black text-gray-900">1:1 문의</h2>
+          <button type="button" onClick={fetchInquiries} className="text-xs font-black text-gray-400 hover:text-red-600">
+            새로고침
+          </button>
+        </div>
+        {inquiriesLoading ? (
+          <div className="p-8 text-center text-gray-400 font-bold">목록을 불러오는 중…</div>
+        ) : inquiries.length === 0 ? (
+          <div className="p-12 text-center text-gray-400 font-bold">문의가 없습니다.</div>
+        ) : (
+          <ul className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
+            {inquiries.map((q) => (
+              <li key={q.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInquiryId(q.id)}
+                  className={`w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors ${
+                    selectedInquiryId === q.id ? 'bg-red-50/50' : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black text-gray-900 truncate">{q.subject}</p>
+                      <p className="text-xs text-gray-400 font-bold mt-1">{q.created_at?.slice(0, 10)}</p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-[10px] font-black ${
+                        q.status === 'answered'
+                          ? 'bg-green-50 text-green-700'
+                          : q.status === 'closed'
+                            ? 'bg-gray-100 text-gray-600'
+                            : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {q.status === 'answered' ? '답변완료' : q.status === 'closed' ? '종료' : '대기중'}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="lg:col-span-7 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+        {!selectedInquiry ? (
+          <div className="h-full flex items-center justify-center text-gray-300 font-bold">문의 항목을 선택해 주세요.</div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-black text-gray-900">{selectedInquiry.subject}</h3>
+                <p className="text-xs text-gray-400 font-bold mt-1">{selectedInquiry.created_at}</p>
+              </div>
+              <span className="text-xs font-black text-gray-400">User: {selectedInquiry.user_id}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-800 whitespace-pre-wrap mb-6">
+              {selectedInquiry.message}
+            </div>
+            <label className="block text-xs font-black text-gray-500 mb-2">답변</label>
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              className="w-full min-h-[160px] px-4 py-3 border border-gray-200 rounded-2xl text-sm"
+              placeholder="답변을 입력하세요."
+            />
+            <div className="flex items-center justify-end gap-3 mt-4">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!selectedInquiry) return;
+                  setReplySaving(true);
+                  try {
+                    await replyToInquiry(selectedInquiry.id, { adminReply: replyText, status: 'answered' });
+                    await fetchInquiries();
+                  } finally {
+                    setReplySaving(false);
+                  }
+                }}
+                disabled={replySaving}
+                className="px-6 py-3 rounded-2xl bg-gray-900 text-white text-sm font-black hover:bg-black disabled:opacity-50"
+              >
+                {replySaving ? '저장 중…' : '답변 저장'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   const handleLogout = () => {
     Promise.resolve(onClose()).catch((e) => console.error('Logout error:', e));
   };
@@ -2763,7 +2970,7 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </header>
 
         <main className="flex-grow overflow-y-auto p-10 bg-[#fcfcfc]">
-          {activeTab === 'orders' ? renderOrders() : activeTab === 'products' ? renderProducts() : activeTab === 'members' ? renderMembers() : activeTab === 'dashboard' ? renderDashboard() : activeTab === 'notices' ? renderNotices() : activeTab === 'live' ? renderLive() : activeTab === 'banners' ? renderBanners() : activeTab === 'insights' ? renderInsights() : activeTab === 'coupons' ? renderCoupons() : activeTab === 'reviews' ? renderReviews() : (
+          {activeTab === 'orders' ? renderOrders() : activeTab === 'products' ? renderProducts() : activeTab === 'members' ? renderMembers() : activeTab === 'dashboard' ? renderDashboard() : activeTab === 'notices' ? renderNotices() : activeTab === 'live' ? renderLive() : activeTab === 'banners' ? renderBanners() : activeTab === 'inquiries' ? renderInquiries() : activeTab === 'insights' ? renderInsights() : activeTab === 'coupons' ? renderCoupons() : activeTab === 'reviews' ? renderReviews() : (
             <div className="h-full flex flex-col items-center justify-center text-gray-300">
               <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
                 <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,0 +1,18 @@
+{
+  "lang.ko": "韓文",
+  "lang.zhTW": "繁體中文",
+  "nav.home": "首頁",
+  "nav.category": "分類",
+  "nav.live": "直播",
+  "nav.deals": "特惠",
+  "nav.my": "我的",
+  "search.placeholder": "想找什麼免稅優惠？",
+  "search.trendingTitle": "熱門搜尋",
+  "notFound.title": "找不到頁面",
+  "notFound.desc": "您要前往的頁面不存在或已移動。",
+  "actions.goHome": "回到首頁",
+  "mypage.pointsHistory": "💰 點數明細",
+  "mypage.addresses": "📍 收件地址",
+  "mypage.tierBenefits": "🏆 會員等級權益"
+}
+
