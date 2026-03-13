@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { EventRow } from '../types';
 
 const MAIN_POPUP_DISMISSED_KEY = 'main-popup-dismissed';
@@ -26,6 +27,7 @@ interface MainPopupModalProps {
 }
 
 const MainPopupModal: React.FC<MainPopupModalProps> = ({ event, onClose, onDismissToday }) => {
+  const { t } = useTranslation();
   const handleImageClick = () => {
     if (event.link_url?.trim()) {
       window.open(event.link_url.trim(), '_blank', 'noopener,noreferrer');
@@ -47,7 +49,7 @@ const MainPopupModal: React.FC<MainPopupModalProps> = ({ event, onClose, onDismi
           type="button"
           onClick={onClose}
           className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors"
-          aria-label="닫기"
+          aria-label={t('popup.closeAria')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -73,7 +75,7 @@ const MainPopupModal: React.FC<MainPopupModalProps> = ({ event, onClose, onDismi
                 rel="noopener noreferrer"
                 className="inline-block mt-4 px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700"
               >
-                자세히 보기
+                {t('popup.viewDetails')}
               </a>
             )}
           </div>
@@ -84,14 +86,14 @@ const MainPopupModal: React.FC<MainPopupModalProps> = ({ event, onClose, onDismi
             onClick={handleDismissToday}
             className="px-4 py-2 text-sm font-bold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
           >
-            오늘 하루 안 보기
+            {t('popup.dismissToday')}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200"
           >
-            닫기
+            {t('actions.close')}
           </button>
         </div>
       </div>

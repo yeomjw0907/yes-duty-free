@@ -72,7 +72,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
   const relatedProducts = products.filter(p => p.category === displayProduct.category && p.id !== displayProduct.id).slice(0, 4);
   const bestProducts = products.slice(0, 4);
 
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { twdRatePerKrw } = useExchangeRate();
   const displayName = getProductDisplayName(displayProduct, i18n.language);
   const displayPrice = getProductDisplayPrice(displayProduct, i18n.language, twdRatePerKrw);
@@ -136,7 +136,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
               <span className="text-gray-400 line-through text-sm ml-2">{originalAmount.toLocaleString()}{originalSuffix}</span>
             </div>
             <p className="text-xs text-blue-500 font-bold mt-1">
-               면세 혜택가 적용 완료 (해외배송 전용)
+               {t('product.taxBenefit')}
             </p>
           </div>
 
@@ -160,11 +160,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
 
           <div className="bg-gray-50 p-4 rounded-xl space-y-3">
              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-700">수량 선택</span>
+                <span className="text-sm font-bold text-gray-700">{t('product.quantity')}</span>
                 <div className="flex items-center gap-2">
                   {!displayProduct.isUnlimitedStock && (
                     <span className="text-xs font-bold text-gray-500">
-                      {maxQuantity <= 0 ? '품절' : `재고 ${maxQuantity}개`}
+                      {maxQuantity <= 0 ? t('product.soldOut') : `${t('product.stockCount')} ${maxQuantity}`}
                     </span>
                   )}
                   <div className="flex border border-gray-300 bg-white rounded-lg items-center overflow-hidden">
@@ -189,7 +189,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
                 </div>
              </div>
              <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
-                <span className="text-sm font-bold text-gray-900">총 결제 금액</span>
+                <span className="text-sm font-bold text-gray-900">{t('product.totalLabel')}</span>
                 <span className="text-xl font-bold text-red-600">
                   {isZh && (displayProduct.priceTwd != null || twdRatePerKrw)
                     ? (displayProduct.priceTwd != null ? (displayProduct.priceTwd * effectiveQuantity).toLocaleString() : Math.round((displayProduct.price * effectiveQuantity) / twdRatePerKrw!).toLocaleString()) + '元'
@@ -204,14 +204,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
               disabled={isOutOfStock}
               className="flex-grow py-4 rounded-xl border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
             >
-              {isOutOfStock ? '품절' : '장바구니 담기'}
+              {isOutOfStock ? t('product.soldOut') : t('product.addToCart')}
             </button>
             <button 
               onClick={() => onImmediatePurchase(displayProduct, effectiveQuantity, selectedOptions)}
               disabled={isOutOfStock}
               className="flex-grow py-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {isOutOfStock ? '품절' : '즉시 구매하기'}
+              {isOutOfStock ? t('product.soldOut') : t('product.buyNow')}
             </button>
           </div>
         </div>
@@ -220,10 +220,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
       <div className="border-y sticky top-16 bg-white z-40">
         <div className="max-w-7xl mx-auto px-4 flex gap-10">
            {[
-             { id: '상품설명' as const, label: '상품설명' },
-             { id: '리뷰' as const, label: `리뷰 (${reviews.length})` },
-             { id: '배송/교환/반품' as const, label: '배송/교환/반품' },
-             { id: '커뮤니티' as const, label: '커뮤니티' },
+             { id: '상품설명' as const, label: t('product.tabDesc') },
+             { id: '리뷰' as const, label: `${t('product.tabReview')} (${reviews.length})` },
+             { id: '배송/교환/반품' as const, label: t('product.tabShipping') },
+             { id: '커뮤니티' as const, label: t('product.tabCommunity') },
            ].map(({ id, label }) => (
              <button
               key={id}
@@ -256,7 +256,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
                 </div>
               </div>
               <div className="text-center py-10">
-                <button className="w-full py-4 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">스토리 더보기 ⌵</button>
+                <button className="w-full py-4 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">{t('product.storyMore')} ⌵</button>
               </div>
             </div>
           )}
@@ -268,9 +268,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
           <div className="space-y-10">
             {user && !myReview && !myReviewLoading && (
               <div className="bg-gray-50 rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-bold text-gray-900">리뷰 작성</h3>
+                <h3 className="text-lg font-bold text-gray-900">{t('product.reviewWrite')}</h3>
                 <div>
-                  <span className="text-sm font-bold text-gray-700 block mb-2">평점</span>
+                  <span className="text-sm font-bold text-gray-700 block mb-2">{t('product.rating')}</span>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -286,21 +286,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-gray-700 block mb-2">제목 (선택)</label>
+                  <label className="text-sm font-bold text-gray-700 block mb-2">{t('product.reviewTitle')}</label>
                   <input
                     type="text"
                     value={reviewForm.title}
                     onChange={(e) => setReviewForm((f) => ({ ...f, title: e.target.value }))}
-                    placeholder="한 줄 요약"
+                    placeholder={t('product.reviewTitlePlaceholder')}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl text-gray-900"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-gray-700 block mb-2">내용 *</label>
+                  <label className="text-sm font-bold text-gray-700 block mb-2">{t('product.reviewContent')}</label>
                   <textarea
                     value={reviewForm.content}
                     onChange={(e) => setReviewForm((f) => ({ ...f, content: e.target.value }))}
-                    placeholder="상품 사용 후기를 남겨주세요."
+                    placeholder={t('product.reviewContentPlaceholder')}
                     rows={4}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl text-gray-900 resize-none"
                   />
@@ -312,19 +312,19 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
                   onClick={() => submitReview({ rating: reviewForm.rating, title: reviewForm.title || undefined, content: reviewForm.content.trim() })}
                   className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {reviewSubmitting ? '등록 중…' : '리뷰 등록'}
+                  {reviewSubmitting ? t('actions.registering') : t('product.reviewSubmit')}
                 </button>
               </div>
             )}
             {!user && (
-              <p className="text-gray-500 py-4">로그인 후 리뷰를 작성할 수 있습니다.</p>
+              <p className="text-gray-500 py-4">{t('product.reviewLogin')}</p>
             )}
             <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-4">전체 리뷰</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">{t('product.reviewList')}</h3>
               {reviewsLoading ? (
-                <p className="text-gray-400 py-8">리뷰를 불러오는 중…</p>
+                <p className="text-gray-400 py-8">{t('product.reviewLoading')}</p>
               ) : reviews.length === 0 ? (
-                <p className="text-gray-400 py-8">아직 리뷰가 없습니다.</p>
+                <p className="text-gray-400 py-8">{t('product.reviewEmpty')}</p>
               ) : (
                 <ul className="space-y-6">
                   {reviews.map((r) => (
@@ -335,8 +335,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
                             <svg key={i} className="w-4 h-4" fill={i <= r.rating ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 20 20"><path strokeWidth={1.5} d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                           ))}
                         </span>
-                        <span className="text-sm font-bold text-gray-700">{r.user_name ?? '회원'}</span>
-                        {r.is_verified_purchase && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">구매확정</span>}
+                        <span className="text-sm font-bold text-gray-700">{r.user_name ?? t('product.member')}</span>
+                        {r.is_verified_purchase && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{t('product.verifiedPurchase')}</span>}
                         <span className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
                       </div>
                       {r.title && <p className="font-bold text-gray-900 mb-1">{r.title}</p>}
@@ -352,32 +352,32 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
 
       {(activeTab === '배송/교환/반품' || activeTab === '커뮤니티') && (
         <div className="max-w-4xl mx-auto px-4 py-16 text-gray-500">
-          {activeTab === '배송/교환/반품' && <p>배송·교환·반품 안내가 곧 제공됩니다.</p>}
-          {activeTab === '커뮤니티' && <p>커뮤니티는 준비 중입니다.</p>}
+          {activeTab === '배송/교환/반품' && <p>{t('product.shippingNotice')}</p>}
+          {activeTab === '커뮤니티' && <p>{t('product.communityNotice')}</p>}
         </div>
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-20 border-t border-gray-100 space-y-20">
         <section>
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-gray-900">같이 보면 좋은 상품</h3>
+            <h3 className="text-xl font-bold text-gray-900">{t('product.relatedTitle')}</h3>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {relatedProducts.length > 0 ? relatedProducts.map((p, idx) => (
               <div key={`related-${p.id}`} onClick={() => onProductClick?.(p)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onProductClick?.(p)}>
                 <ProductCard product={p} wishlist={user ? getWishlistProps(p) : undefined} />
               </div>
-            )) : <p className="text-gray-300">추천 상품이 없습니다.</p>}
+            )) : <p className="text-gray-300">{t('product.noRelated')}</p>}
           </div>
         </section>
       </div>
 
       <ConfirmModal
         open={!!confirmWishlistRemove}
-        title="찜 해제"
-        message="정말 삭제하시겠습니까?"
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t('product.wishlistRemoveTitle')}
+        message={t('product.wishlistRemoveMessage')}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
         onConfirm={handleConfirmWishlistRemove}
         onCancel={() => setConfirmWishlistRemove(null)}
         loading={wishlistToggling}

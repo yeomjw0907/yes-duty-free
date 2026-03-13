@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getBanners } from '../lib/api/banners';
 import type { BannerSlide } from '../types';
 
@@ -22,6 +23,7 @@ const FALLBACK_BANNERS: BannerSlide[] = [
 ];
 
 const HeroBanner: React.FC = () => {
+  const { t } = useTranslation();
   const [slides, setSlides] = useState<BannerSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
@@ -85,11 +87,11 @@ const HeroBanner: React.FC = () => {
             rel={slide.linkUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
             className="bg-white text-gray-900 px-10 py-4 rounded-full text-sm font-black hover:bg-red-600 hover:text-white transition-all w-fit shadow-xl hover:-translate-y-1 active:scale-95"
           >
-            컬렉션 살펴보기
+            {t('banner.viewCollection')}
           </a>
         ) : (
           <span className="bg-white text-gray-900 px-10 py-4 rounded-full text-sm font-black w-fit shadow-xl cursor-default">
-            컬렉션 살펴보기
+            {t('banner.viewCollection')}
           </span>
         )}
       </div>

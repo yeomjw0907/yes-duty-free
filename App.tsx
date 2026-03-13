@@ -37,9 +37,11 @@ import { createOrder } from './lib/api/orders';
 import { checkIsAdmin } from './lib/api/admin';
 import { claimCouponByCode } from './lib/api/coupons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Product, CartItem, Coupon, Order, LiveStream } from './types';
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const [showIntro, setShowIntro] = useState(() =>
     typeof window !== 'undefined' && !localStorage.getItem(INTRO_STORAGE_KEY)
   );
@@ -343,8 +345,8 @@ const App: React.FC = () => {
 
       <section className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
-          <h2 className="text-2xl font-black text-gray-900 tracking-tighter">실시간 인기 면세템</h2>
-          <button onClick={() => navigateToPage('best')} className="text-xs font-black text-gray-400 hover:text-red-600">View All &gt;</button>
+          <h2 className="text-2xl font-black text-gray-900 tracking-tighter">{t('home.popularTitle')}</h2>
+          <button onClick={() => navigateToPage('best')} className="text-xs font-black text-gray-400 hover:text-red-600">{t('home.viewAllCta')} &gt;</button>
         </div>
         {productsLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
@@ -409,14 +411,14 @@ const App: React.FC = () => {
       {currentPage === 'search' && (
         <div className="max-w-7xl mx-auto px-4 py-10">
           <h2 className="text-2xl font-black text-gray-900 mb-2">
-            검색 결과 {searchQuery && <span className="text-red-600">&quot;{searchQuery}&quot;</span>}
+            {t('search.resultTitle')} {searchQuery && <span className="text-red-600">&quot;{searchQuery}&quot;</span>}
           </h2>
           {!searchQuery.trim() ? (
-            <p className="text-gray-500 py-8">검색어를 입력해 주세요.</p>
+            <p className="text-gray-500 py-8">{t('search.enterQuery')}</p>
           ) : searchLoading ? (
-            <p className="text-gray-400 py-8">검색 중…</p>
+            <p className="text-gray-400 py-8">{t('search.searching')}</p>
           ) : searchResults.length === 0 ? (
-            <p className="text-gray-500 py-8">검색 결과가 없습니다.</p>
+            <p className="text-gray-500 py-8">{t('search.noResults')}</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
               {searchResults.map((p) => (
@@ -435,8 +437,8 @@ const App: React.FC = () => {
         >
           {liveStreams.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-white/60 px-4">
-              <p className="text-lg font-bold">진행 중인 라이브가 없습니다.</p>
-              <button type="button" onClick={() => navigateToPage('home')} className="mt-4 px-6 py-3 bg-white/10 rounded-xl font-bold hover:bg-white/20">홈으로</button>
+              <p className="text-lg font-bold">{t('live.noLiveNow')}</p>
+              <button type="button" onClick={() => navigateToPage('home')} className="mt-4 px-6 py-3 bg-white/10 rounded-xl font-bold hover:bg-white/20">{t('actions.goHome')}</button>
             </div>
           ) : (
             liveStreams.map((live, idx) => {
@@ -474,14 +476,14 @@ const App: React.FC = () => {
                       </div>
                     </div>
                     <h3 className="text-white text-xl sm:text-2xl font-black leading-tight mb-3 sm:mb-4">{live.title}</h3>
-                    <p className="text-white/60 text-xs sm:text-sm mb-6 sm:mb-10 line-clamp-2">지금 바로 입장해서 글로벌 단독 특가 상품을 만나보세요.</p>
+                    <p className="text-white/60 text-xs sm:text-sm mb-6 sm:mb-10 line-clamp-2">{t('live.benefitDesc')}</p>
                     <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
                       <button
                         type="button"
                         onClick={() => (linkProduct ? handleProductClick(linkProduct) : products[0] && handleProductClick(products[0]))}
                         className="flex-1 min-w-0 bg-white text-black py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm hover:bg-red-600 hover:text-white transition-all"
                       >
-                        실시간 혜택받기
+                        {t('live.benefitCta')}
                       </button>
                     </div>
                   </div>
@@ -501,7 +503,7 @@ const App: React.FC = () => {
       )}
       {currentPage === 'all_categories' && (
         <div className="max-w-7xl mx-auto px-4 py-20">
-          <h2 className="text-3xl font-black mb-12">전체 카테고리</h2>
+          <h2 className="text-3xl font-black mb-12">{t('category.all')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {categoryNames.map(cat => (
               <div key={cat} onClick={() => navigateToPage('category', cat as string)} className="p-10 bg-white border border-gray-100 rounded-[2rem] flex flex-col items-center gap-4 cursor-pointer hover:border-red-500 hover:shadow-xl transition-all group">
@@ -541,7 +543,7 @@ const App: React.FC = () => {
             </div>
             <div>
               <h2 className="text-4xl font-black text-gray-900 tracking-tighter">
-                {profile?.name ?? user?.email ?? '회원'}님{' '}
+                {profile?.name ?? user?.email ?? t('product.member')}{t('mypage.nameSuffix')}{' '}
                 <span className="text-red-600">{profile?.membership_tier === 'vip' ? 'VIP' : profile?.membership_tier === 'premium' ? 'Premium' : 'Basic'}</span>
               </h2>
               <p className="text-gray-400 font-bold mt-2">
@@ -588,12 +590,12 @@ const App: React.FC = () => {
           </div>
           {user && (
             <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden mb-8">
-              <h3 className="px-6 py-4 border-b border-gray-100 text-lg font-black text-gray-900">찜한 상품</h3>
+              <h3 className="px-6 py-4 border-b border-gray-100 text-lg font-black text-gray-900">{t('mypage.wishlistTitle')}</h3>
               {wishlist.length === 0 ? (
                 <div className="p-12 flex flex-col items-center justify-center gap-4 text-center">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 text-2xl">❤️</div>
-                  <p className="text-gray-400 font-bold">찜한 상품이 없습니다.</p>
-                  <button type="button" onClick={() => navigateToPage('home')} className="text-sm font-bold text-red-600 hover:underline">쇼핑하러 가기</button>
+                  <p className="text-gray-400 font-bold">{t('mypage.wishlistEmpty')}</p>
+                  <button type="button" onClick={() => navigateToPage('home')} className="text-sm font-bold text-red-600 hover:underline">{t('mypage.shopNow')}</button>
                 </div>
               ) : (
                 <div className="p-6">
@@ -609,7 +611,7 @@ const App: React.FC = () => {
             </div>
           )}
           <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden">
-            <h3 className="px-6 py-4 border-b border-gray-100 text-lg font-black text-gray-900">주문 내역</h3>
+            <h3 className="px-6 py-4 border-b border-gray-100 text-lg font-black text-gray-900">{t('mypage.orderHistory')}</h3>
             {ordersLoading ? (
               <div className="p-12 flex justify-center">
                 <div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />
@@ -617,7 +619,7 @@ const App: React.FC = () => {
             ) : myOrders.length === 0 ? (
               <div className="p-20 flex flex-col items-center justify-center gap-4 text-center">
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-200">📦</div>
-                <p className="text-gray-400 font-bold">최근 주문 내역이 없습니다.</p>
+                <p className="text-gray-400 font-bold">{t('mypage.noOrders')}</p>
               </div>
             ) : (
               <ul className="divide-y divide-gray-100">
@@ -634,7 +636,7 @@ const App: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-black text-red-600">{o.total_amount.toLocaleString()}원</p>
-                        <p className="text-xs text-gray-400 mt-0.5">상세 보기 →</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{t('mypage.viewDetail')} →</p>
                       </div>
                     </button>
                   </li>
@@ -671,10 +673,10 @@ const App: React.FC = () => {
       )}
       <ConfirmModal
         open={!!confirmWishlistRemove}
-        title="찜 해제"
-        message="정말 삭제하시겠습니까?"
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t('product.wishlistRemoveTitle')}
+        message={t('product.wishlistRemoveMessage')}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
         onConfirm={handleConfirmWishlistRemove}
         onCancel={() => setConfirmWishlistRemove(null)}
         loading={wishlistToggling}
@@ -787,11 +789,11 @@ const App: React.FC = () => {
 
       {currentPage === 'notices' && (
         <div className="max-w-3xl mx-auto px-4 py-12">
-          <h2 className="text-2xl font-black text-gray-900 mb-8">공지사항</h2>
+          <h2 className="text-2xl font-black text-gray-900 mb-8">{t('notices.title')}</h2>
           {boardEventsLoading ? (
-            <div className="py-12 text-center text-gray-400 font-bold">목록을 불러오는 중…</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('notices.loading')}</div>
           ) : boardEventsList.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 font-bold">등록된 공지가 없습니다.</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('notices.empty')}</div>
           ) : (
             <ul className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100">
               {boardEventsList.map((ev) => (
@@ -815,16 +817,16 @@ const App: React.FC = () => {
 
       {currentPage === 'notice-detail' && (
         <div className="max-w-3xl mx-auto px-4 py-12">
-          <button type="button" onClick={() => navigateToPage('notices')} className="text-sm font-bold text-gray-500 hover:text-red-600 mb-6">← 목록</button>
+          <button type="button" onClick={() => navigateToPage('notices')} className="text-sm font-bold text-gray-500 hover:text-red-600 mb-6">{t('notices.backList')}</button>
           {boardEventDetailLoading ? (
-            <div className="py-12 text-center text-gray-400 font-bold">불러오는 중…</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('notices.loadingDetail')}</div>
           ) : !boardEventDetail ? (
-            <div className="py-12 text-center text-gray-400 font-bold">글이 없거나 삭제되었습니다.</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('notices.notFound')}</div>
           ) : (
             <article className="prose prose-gray max-w-none">
               <h1 className="text-2xl font-black text-gray-900 mb-2">{boardEventDetail.title}</h1>
               <p className="text-sm text-gray-500 mb-6">{boardEventDetail.created_at ? formatOrderDate(boardEventDetail.created_at) : ''}</p>
-              <div className="text-gray-700 whitespace-pre-wrap">{boardEventDetail.content || '내용 없음'}</div>
+              <div className="text-gray-700 whitespace-pre-wrap">{boardEventDetail.content || t('notices.noContent')}</div>
             </article>
           )}
         </div>
@@ -832,11 +834,11 @@ const App: React.FC = () => {
 
       {currentPage === 'events' && (
         <div className="max-w-3xl mx-auto px-4 py-12">
-          <h2 className="text-2xl font-black text-gray-900 mb-8">이벤트</h2>
+          <h2 className="text-2xl font-black text-gray-900 mb-8">{t('events.title')}</h2>
           {boardEventsLoading ? (
-            <div className="py-12 text-center text-gray-400 font-bold">목록을 불러오는 중…</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('events.loading')}</div>
           ) : boardEventsList.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 font-bold">진행 중인 이벤트가 없습니다.</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('events.empty')}</div>
           ) : (
             <ul className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100">
               {boardEventsList.map((ev) => (
@@ -860,11 +862,11 @@ const App: React.FC = () => {
 
       {currentPage === 'event-detail' && (
         <div className="max-w-3xl mx-auto px-4 py-12">
-          <button type="button" onClick={() => navigateToPage('events')} className="text-sm font-bold text-gray-500 hover:text-red-600 mb-6">← 목록</button>
+          <button type="button" onClick={() => navigateToPage('events')} className="text-sm font-bold text-gray-500 hover:text-red-600 mb-6">{t('events.backList')}</button>
           {boardEventDetailLoading ? (
-            <div className="py-12 text-center text-gray-400 font-bold">불러오는 중…</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('notices.loadingDetail')}</div>
           ) : !boardEventDetail ? (
-            <div className="py-12 text-center text-gray-400 font-bold">글이 없거나 삭제되었습니다.</div>
+            <div className="py-12 text-center text-gray-400 font-bold">{t('notices.notFound')}</div>
           ) : (
             <article className="prose prose-gray max-w-none">
               <h1 className="text-2xl font-black text-gray-900 mb-2">{boardEventDetail.title}</h1>
@@ -872,10 +874,10 @@ const App: React.FC = () => {
               {boardEventDetail.popup_image_url && (
                 <img src={boardEventDetail.popup_image_url} alt={boardEventDetail.title} className="w-full rounded-xl mb-6 object-contain" />
               )}
-              <div className="text-gray-700 whitespace-pre-wrap">{boardEventDetail.content || '내용 없음'}</div>
+              <div className="text-gray-700 whitespace-pre-wrap">{boardEventDetail.content || t('notices.noContent')}</div>
               {boardEventDetail.link_url?.trim() && (
                 <a href={boardEventDetail.link_url.trim()} target="_blank" rel="noopener noreferrer" className="inline-block mt-6 px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700">
-                  자세히 보기
+                  {t('actions.viewDetails')}
                 </a>
               )}
             </article>
@@ -896,7 +898,7 @@ const App: React.FC = () => {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5" placeholder="admin@onecation.co.kr"/>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5" placeholder="admin123!"/>
               {error && <p className="text-xs text-red-600 font-bold">{error}</p>}
-              <button type="submit" className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black">로그인</button>
+              <button type="submit" className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black">{t('auth.login')}</button>
             </form>
           </div>
         </div>

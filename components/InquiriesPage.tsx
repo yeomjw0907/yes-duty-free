@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { User } from '@supabase/supabase-js';
 import { createInquiry, getMyInquiries, type InquiryRow } from '../lib/api/inquiries';
 
@@ -55,7 +56,7 @@ const InquiriesPage: React.FC<InquiriesPageProps> = ({ user, onNavigateToLogin, 
       setMessage('');
       await fetchList();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '문의 등록에 실패했습니다.');
+      setError(err instanceof Error ? err.message : t('inquiry.errorSubmit'));
     } finally {
       setSubmitting(false);
     }
@@ -65,10 +66,10 @@ const InquiriesPage: React.FC<InquiriesPageProps> = ({ user, onNavigateToLogin, 
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 py-20 bg-[#fcfcfc]">
         <div className="bg-white rounded-[2rem] p-12 max-w-md w-full text-center border border-gray-100 shadow-sm">
-          <h2 className="text-xl font-black text-gray-900 mb-2">로그인이 필요합니다</h2>
-          <p className="text-gray-500 text-sm mb-8">1:1 문의를 이용하려면 로그인해 주세요.</p>
+          <h2 className="text-xl font-black text-gray-900 mb-2">{t('inquiry.loginRequired')}</h2>
+          <p className="text-gray-500 text-sm mb-8">{t('inquiry.loginDesc')}</p>
           <button onClick={onNavigateToLogin} className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700">
-            로그인하기
+            {t('actions.login')}
           </button>
         </div>
       </div>
@@ -79,32 +80,32 @@ const InquiriesPage: React.FC<InquiriesPageProps> = ({ user, onNavigateToLogin, 
     <div className="max-w-4xl mx-auto px-4 py-10 bg-[#fcfcfc] min-h-screen">
       <div className="flex items-center justify-between mb-8">
         <button type="button" onClick={onBack} className="text-sm font-bold text-gray-500 hover:text-red-600">
-          ← 마이페이지
+          {t('inquiry.backToMypage')}
         </button>
-        <h1 className="text-xl font-black text-gray-900 tracking-tighter">1:1 문의</h1>
+        <h1 className="text-xl font-black text-gray-900 tracking-tighter">{t('inquiry.title')}</h1>
         <div className="w-16" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <section className="lg:col-span-5 bg-white rounded-[2rem] border border-gray-100 p-6">
-          <h2 className="text-lg font-black text-gray-900 mb-4">문의 작성</h2>
+          <h2 className="text-lg font-black text-gray-900 mb-4">{t('inquiry.writeTitle')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-black text-gray-500 mb-1">제목</label>
+              <label className="block text-xs font-black text-gray-500 mb-1">{t('inquiry.subject')}</label>
               <input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm"
-                placeholder="예) 배송지 변경 요청"
+                placeholder={t('inquiry.subjectPlaceholder')}
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-gray-500 mb-1">내용</label>
+              <label className="block text-xs font-black text-gray-500 mb-1">{t('inquiry.content')}</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm min-h-[140px]"
-                placeholder="문의 내용을 입력해 주세요."
+                placeholder={t('inquiry.contentPlaceholder')}
               />
             </div>
             {error && <p className="text-xs text-red-600 font-bold">{error}</p>}
@@ -113,16 +114,16 @@ const InquiriesPage: React.FC<InquiriesPageProps> = ({ user, onNavigateToLogin, 
               disabled={!canSubmit || submitting}
               className="w-full py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? '등록 중…' : '문의 등록'}
+              {submitting ? t('inquiry.submitting') : t('inquiry.submit')}
             </button>
           </form>
         </section>
 
         <section className="lg:col-span-7 bg-white rounded-[2rem] border border-gray-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-lg font-black text-gray-900">내 문의</h2>
+            <h2 className="text-lg font-black text-gray-900">{t('inquiry.myInquiries')}</h2>
             <button type="button" onClick={fetchList} className="text-xs font-black text-gray-400 hover:text-red-600">
-              새로고침
+              {t('inquiry.refresh')}
             </button>
           </div>
           {loading ? (
@@ -132,7 +133,7 @@ const InquiriesPage: React.FC<InquiriesPageProps> = ({ user, onNavigateToLogin, 
             </div>
           ) : list.length === 0 ? (
             <div className="p-14 text-center">
-              <p className="text-gray-400 font-bold">등록된 문의가 없습니다.</p>
+              <p className="text-gray-400 font-bold">{t('inquiry.empty')}</p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
@@ -154,7 +155,7 @@ const InquiriesPage: React.FC<InquiriesPageProps> = ({ user, onNavigateToLogin, 
                   <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap">{q.message}</p>
                   {q.admin_reply && (
                     <div className="mt-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-                      <p className="text-xs font-black text-gray-500 mb-2">관리자 답변</p>
+                      <p className="text-xs font-black text-gray-500 mb-2">{t('inquiry.adminReply')}</p>
                       <p className="text-sm text-gray-800 whitespace-pre-wrap">{q.admin_reply}</p>
                       {q.replied_at && <p className="text-[11px] text-gray-400 font-bold mt-2">{formatDateTime(q.replied_at)}</p>}
                     </div>

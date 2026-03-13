@@ -134,7 +134,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                 }}
                 className="p-2 lg:p-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all shrink-0 font-black text-sm lg:text-base"
               >
-                검색
+                {t('search.button')}
               </button>
               <button
                 type="button"
@@ -294,16 +294,16 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                       onClick={() => onLogout?.().then(() => setCurrentPage('home'))}
                       className={`px-8 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white/20 text-white hover:bg-red-600 border border-white/30' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 border border-gray-200'}`}
                     >
-                      로그아웃
+                      {t('auth.logout')}
                     </button>
                   </>
                 ) : !authLoading ? (
                   <>
                     <button onClick={() => setCurrentPage('login')} className={`px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 border ${isLiveMode ? 'bg-transparent text-white border-white/40 hover:bg-white/20' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-red-600'}`}>
-                      로그인
+                      {t('auth.login')}
                     </button>
                     <button onClick={() => setCurrentPage('signup')} className={`px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white text-black hover:bg-red-600' : 'bg-gray-900 text-white hover:bg-red-600 hover:bg-red-700'}`}>
-                      회원가입
+                      {t('auth.signup')}
                     </button>
                   </>
                 ) : null}
@@ -318,7 +318,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                 onClick={() => setCurrentPage('home')} 
                 className={`text-[13px] font-black whitespace-nowrap transition-colors ${currentPage === 'home' ? 'text-red-600' : 'text-gray-500'}`}
               >
-                전체보기
+                {t('nav.viewAll')}
               </button>
               {categoryNames.map(cat => (
                 <button 
@@ -373,18 +373,18 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                 <div>
                   <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">Customer Support</h4>
                   <ul className="text-sm space-y-4 font-medium text-gray-500">
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('notices'); }}>공지사항</li>
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('events'); }}>이벤트</li>
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('faq')}>자주 묻는 질문</li>
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('inquiries'); }}>1:1 문의하기</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('notices'); }}>{t('footer.notices')}</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('events'); }}>{t('footer.events')}</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('faq')}>{t('footer.faq')}</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('inquiries'); }}>{t('footer.inquiry')}</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">Global Logistics</h4>
                   <ul className="text-sm space-y-4 font-medium text-gray-500">
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setCurrentPage('mypage')}>배송 현황 조회</li>
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('customs')}>통관 안내</li>
-                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('countries')}>해외 배송 가능 국가</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setCurrentPage('mypage')}>{t('footer.delivery')}</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('customs')}>{t('footer.customs')}</li>
+                    <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('countries')}>{t('footer.countries')}</li>
                   </ul>
                 </div>
                 <div>
@@ -411,7 +411,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               )}
               <div className="flex gap-6 sm:gap-8 order-1 sm:order-2">
                 {onOpenAdminLogin && (
-                  <span className="hover:text-white cursor-pointer transition-colors" onClick={onOpenAdminLogin}>관리자</span>
+                  <span className="hover:text-white cursor-pointer transition-colors" onClick={onOpenAdminLogin}>{t('footer.admin')}</span>
                 )}
                 <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('terms')}>Terms of Service</span>
                 <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('privacy')}>Privacy Policy</span>
@@ -422,7 +422,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
       )}
 
       {/* Footer 모달 */}
-      <FooterModal open={footerModal === 'faq'} title="자주 묻는 질문" onClose={() => setFooterModal(null)}>
+      <FooterModal open={footerModal === 'faq'} title={t('footer.faqTitle')} onClose={() => setFooterModal(null)}>
         <div className="space-y-6">
           <div>
             <p className="font-bold text-gray-900 mb-1">주문은 어떻게 취소하나요?</p>
@@ -438,7 +438,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
           </div>
         </div>
       </FooterModal>
-      <FooterModal open={footerModal === 'customs'} title="통관 안내" onClose={() => setFooterModal(null)}>
+      <FooterModal open={footerModal === 'customs'} title={t('footer.customsTitle')} onClose={() => setFooterModal(null)}>
         <p className="mb-4">해외 직구·면세 구매 시 통관 관련 안내입니다.</p>
         <ul className="space-y-2 text-gray-600">
           <li>· 개인통관고유부호(PCCC)가 필요할 수 있습니다.</li>
@@ -447,7 +447,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
         </ul>
         <p className="mt-6 text-gray-400 text-xs">자세한 내용은 관세청 홈페이지를 참고해 주세요.</p>
       </FooterModal>
-      <FooterModal open={footerModal === 'countries'} title="해외 배송 가능 국가" onClose={() => setFooterModal(null)}>
+      <FooterModal open={footerModal === 'countries'} title={t('footer.countriesTitle')} onClose={() => setFooterModal(null)}>
         <p className="mb-4">현재 아래 국가/지역으로 배송이 가능합니다.</p>
         <ul className="space-y-1 text-gray-600">
           <li>· 대한민국</li>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '../lib/api/users';
 import type { OrderRecord } from '../lib/api/orders';
@@ -29,18 +30,19 @@ const PointHistoryPage: React.FC<PointHistoryPageProps> = ({
   onNavigateToLogin,
   onBack,
 }) => {
+  const { t } = useTranslation();
   if (!user) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 py-20 bg-[#fcfcfc]">
         <div className="bg-white rounded-[2rem] p-12 max-w-md w-full text-center border border-gray-100 shadow-sm">
-          <h2 className="text-xl font-black text-gray-900 mb-2">로그인이 필요합니다</h2>
-          <p className="text-gray-500 text-sm mb-8">포인트 내역을 보려면 로그인해 주세요.</p>
+          <h2 className="text-xl font-black text-gray-900 mb-2">{t('point.loginRequired')}</h2>
+          <p className="text-gray-500 text-sm mb-8">{t('point.loginDesc')}</p>
           <button
             type="button"
             onClick={onNavigateToLogin}
             className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700"
           >
-            로그인하기
+            {t('actions.login')}
           </button>
         </div>
       </div>
@@ -80,21 +82,21 @@ const PointHistoryPage: React.FC<PointHistoryPageProps> = ({
           onClick={onBack}
           className="text-sm font-bold text-gray-500 hover:text-red-600"
         >
-          ← 마이페이지
+          {t('point.backToMypage')}
         </button>
-        <h1 className="text-xl font-black text-gray-900 tracking-tighter">포인트 내역</h1>
+        <h1 className="text-xl font-black text-gray-900 tracking-tighter">{t('point.title')}</h1>
         <div className="w-16" />
       </div>
 
       <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Balance</p>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('point.balance')}</p>
             <p className="text-2xl font-black text-gray-900 mt-1">
               {(profile?.points ?? 0).toLocaleString()}P
             </p>
           </div>
-          <p className="text-xs text-gray-400 font-bold">주문 기준 적립/사용 내역</p>
+          <p className="text-xs text-gray-400 font-bold">{t('point.orderHistory')}</p>
         </div>
 
         {isLoading ? (
@@ -104,7 +106,7 @@ const PointHistoryPage: React.FC<PointHistoryPageProps> = ({
           </div>
         ) : entries.length === 0 ? (
           <div className="p-14 text-center">
-            <p className="text-gray-400 font-bold">포인트 내역이 없습니다.</p>
+            <p className="text-gray-400 font-bold">{t('point.empty')}</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
@@ -112,7 +114,7 @@ const PointHistoryPage: React.FC<PointHistoryPageProps> = ({
               <li key={e.id} className="px-6 py-4 flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-900 truncate">
-                    {e.type === 'earn' ? '주문 적립' : '주문 사용'} · {e.order_number}
+                    {e.type === 'earn' ? t('point.earn') : t('point.use')} · {e.order_number}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">{formatDate(e.created_at)}</p>
                 </div>

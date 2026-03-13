@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LiveStream } from '../types';
 
 interface LiveSectionProps {
@@ -8,6 +9,7 @@ interface LiveSectionProps {
 }
 
 const LiveSection: React.FC<LiveSectionProps> = ({ liveStreams = [], isLoading, onNavigateToLive }) => {
+  const { t } = useTranslation();
 
   return (
     <div className="py-16 bg-white border-y border-gray-50">
@@ -19,16 +21,16 @@ const LiveSection: React.FC<LiveSectionProps> = ({ liveStreams = [], isLoading, 
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-red-600"></span>
               </span>
-              지금 뜨는 라방
+              {t('home.liveTitle')}
             </h2>
-            <p className="text-sm text-gray-600 mt-2">전문 쇼호스트가 전하는 생생한 면세 혜택</p>
+            <p className="text-sm text-gray-600 mt-2">{t('home.liveSubtitle')}</p>
           </div>
           <button
             type="button"
             onClick={() => onNavigateToLive?.()}
             className="text-sm font-bold text-gray-400 hover:text-red-500 transition-colors"
           >
-            실시간 방송 더보기 &gt;
+            {t('home.liveMore')} &gt;
           </button>
         </div>
         
@@ -38,7 +40,7 @@ const LiveSection: React.FC<LiveSectionProps> = ({ liveStreams = [], isLoading, 
               <div key={i} className="aspect-[9/16] rounded-2xl bg-gray-100 animate-pulse" />
             ))
           ) : liveStreams.length === 0 ? (
-            <p className="col-span-full text-center text-gray-400 font-bold py-8">진행 예정인 라이브가 없습니다.</p>
+            <p className="col-span-full text-center text-gray-400 font-bold py-8">{t('home.liveEmpty')}</p>
           ) : (
             (liveStreams.length >= 4 ? liveStreams : liveStreams.concat(liveStreams[0])).map((live, idx) => (
             <div
@@ -65,13 +67,13 @@ const LiveSection: React.FC<LiveSectionProps> = ({ liveStreams = [], isLoading, 
                   <div className="absolute top-4 left-4 flex flex-col gap-2">
                     <span className="bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md w-fit shadow-lg">LIVE</span>
                     <span className="bg-black/30 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-md">
-                      {live.viewerCount.toLocaleString()} 시청
+                      {live.viewerCount.toLocaleString()} {t('live.viewers')}
                     </span>
                   </div>
                 ) : (
                   <div className="absolute top-4 left-4">
                     {/* Fixed: Safe access to startTime which is optional on LiveStream interface */}
-                    <span className="bg-gray-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-sm">{live.startTime || '방송 예정'}</span>
+                    <span className="bg-gray-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-sm">{live.startTime || t('live.scheduled')}</span>
                   </div>
                 )}
                 
@@ -83,7 +85,7 @@ const LiveSection: React.FC<LiveSectionProps> = ({ liveStreams = [], isLoading, 
                     <div className="w-8 h-8 rounded-full border border-white/30 overflow-hidden">
                       <img src={`https://i.pravatar.cc/100?u=${live.id}`} alt="host" className="w-full h-full object-cover" />
                     </div>
-                    <span className="text-white/80 text-xs font-medium">DutyFree 쇼호스트</span>
+                    <span className="text-white/80 text-xs font-medium">{t('live.host')}</span>
                   </div>
                 </div>
 

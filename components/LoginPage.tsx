@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface LoginPageProps {
   onSwitchToSignup: () => void;
@@ -7,6 +8,7 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess, onSignIn }) => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,12 +21,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
     try {
       const { error: err } = await onSignIn(email, password);
       if (err) {
-        setError(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 올바르지 않습니다.' : err.message);
+        setError(err.message === 'Invalid login credentials' ? t('login.errorInvalid') : err.message);
         return;
       }
       onLoginSuccess();
     } catch (e) {
-      setError('로그인 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      setError(t('login.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -35,15 +37,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
       <div className="max-w-md w-full">
         <div className="bg-white rounded-[2.5rem] p-10 lg:p-12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-50">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Welcome Back</h2>
-            <p className="text-gray-400 font-medium text-sm mt-3">예스 듀티프리에 오신 것을 환영합니다.</p>
+            <h2 className="text-3xl font-black text-gray-900 tracking-tighter">{t('login.welcome')}</h2>
+            <p className="text-gray-400 font-medium text-sm mt-3">{t('login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
               <input
                 type="email"
-                placeholder="이메일 주소"
+                placeholder={t('login.emailPlaceholder')}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -53,7 +55,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
             <div className="space-y-1.5">
               <input
                 type="password"
-                placeholder="비밀번호"
+                placeholder={t('login.passwordPlaceholder')}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -65,11 +67,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
             <div className="flex items-center justify-between text-[12px] text-gray-400 font-bold py-1">
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" className="w-4 h-4 rounded-md border-gray-200 text-red-600 focus:ring-red-500" />
-                <span className="group-hover:text-gray-600 transition-colors">로그인 유지</span>
+                <span className="group-hover:text-gray-600 transition-colors">{t('login.remember')}</span>
               </label>
               <div className="flex gap-4">
-                <button type="button" className="hover:text-red-600 transition-colors">계정 찾기</button>
-                <button type="button" className="hover:text-red-600 transition-colors">비밀번호 찾기</button>
+                <button type="button" className="hover:text-red-600 transition-colors">{t('login.findAccount')}</button>
+                <button type="button" className="hover:text-red-600 transition-colors">{t('login.findPassword')}</button>
               </div>
             </div>
 
@@ -78,14 +80,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
               disabled={loading}
               className="w-full py-4.5 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-600/10 active:scale-95 mt-6 py-4 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? '로그인 중...' : '로그인하기'}
+              {loading ? t('login.submitting') : t('login.submit')}
             </button>
           </form>
 
           <div className="mt-12 space-y-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-100"></span></div>
-              <div className="relative flex justify-center text-xs font-black uppercase tracking-widest text-gray-300"><span className="bg-white px-4">Social Login</span></div>
+              <div className="relative flex justify-center text-xs font-black uppercase tracking-widest text-gray-300"><span className="bg-white px-4">{t('login.socialTitle')}</span></div>
             </div>
             <div className="flex justify-center gap-6">
               <button className="w-14 h-14 rounded-2xl bg-[#FEE500] flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
@@ -106,12 +108,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToSignup, onLoginSuccess,
 
         <div className="mt-10 text-center">
           <p className="text-[15px] text-gray-400 font-semibold">
-            아직 계정이 없으신가요?
+            {t('login.noAccount')}
             <button 
               onClick={onSwitchToSignup}
               className="ml-3 text-red-600 font-black hover:underline"
             >
-              간편 회원가입
+              {t('login.goSignup')}
             </button>
           </p>
         </div>

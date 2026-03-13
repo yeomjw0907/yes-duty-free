@@ -16,7 +16,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { twdRatePerKrw } = useExchangeRate();
   const displayName = getProductDisplayName(product, i18n.language);
   const displayPrice = getProductDisplayPrice(product, i18n.language, twdRatePerKrw);
@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
         />
         {!product.isUnlimitedStock && (product.stockQuantity ?? 0) <= 0 && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="bg-gray-900 text-white text-sm font-black px-4 py-2 rounded-lg">품절</span>
+            <span className="bg-gray-900 text-white text-sm font-black px-4 py-2 rounded-lg">{t('common.soldOut')}</span>
           </div>
         )}
         {product.discount > 20 && (product.stockQuantity ?? 0) > 0 && (
@@ -47,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
         {wishlist && (
           <button
             type="button"
-            aria-label={wishlist.isInWishlist ? '찜 해제' : '찜하기'}
+            aria-label={wishlist.isInWishlist ? t('product.wishlistRemoveTitle') : t('product.addToCart')}
             onClick={(e) => { e.stopPropagation(); wishlist.onToggle(e); }}
             disabled={wishlist.isToggling}
             className="absolute top-3 right-3 z-10 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-lg hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
@@ -75,10 +75,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, wishlist }) => {
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
             <span className="text-[10px] text-gray-500 font-bold">
               {!product.isUnlimitedStock && (product.stockQuantity ?? 0) <= 0
-                ? '품절'
+                ? t('common.soldOut')
                 : product.isUnlimitedStock
-                  ? `${product.soldCount.toLocaleString()}건+`
-                  : `재고 ${(product.stockQuantity ?? 0)}개`}
+                  ? `${product.soldCount.toLocaleString()}+`
+                  : `${t('common.stock')} ${(product.stockQuantity ?? 0)}`}
             </span>
           </div>
         </div>
