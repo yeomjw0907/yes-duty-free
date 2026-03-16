@@ -23,6 +23,9 @@ export interface Product {
   price: number;
   originalPrice: number;
   imageUrl: string;
+  /** 카테고리 ID (필터/연관상품용). locale 무관. */
+  categoryId?: string | null;
+  /** 카테고리 표시명 (API join 기준, 주로 ko). UI는 id로 필터 후 categories에서 localized name 사용 권장 */
   category: Category | string;
   subCategory?: string;
   tags: string[];

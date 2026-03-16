@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface FooterModalProps {
   open: boolean;
@@ -8,6 +9,7 @@ interface FooterModalProps {
 }
 
 const FooterModal: React.FC<FooterModalProps> = ({ open, title, onClose, children }) => {
+  const { t } = useTranslation();
   if (!open) return null;
   return (
     <div
@@ -24,7 +26,7 @@ const FooterModal: React.FC<FooterModalProps> = ({ open, title, onClose, childre
             type="button"
             onClick={onClose}
             className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
-            aria-label="닫기"
+            aria-label={t('actions.close')}
           >
             ×
           </button>

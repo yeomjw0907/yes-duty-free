@@ -28,6 +28,7 @@ function mapToProduct(p: WishlistRow['products']): Product | null {
     price: p.price,
     originalPrice: p.original_price,
     imageUrl: p.image_url,
+    categoryId: p.category_id ?? undefined,
     category: categoryName,
     tags: [],
     soldCount: 0,
@@ -40,7 +41,7 @@ export async function listWishlist(userId: string): Promise<Product[]> {
     .from('wishlists')
     .select(`
       id, user_id, product_id, created_at,
-      products (id, name, brand, price, original_price, image_url, categories(name))
+      products (id, name, brand, price, original_price, image_url, category_id, categories(name))
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });

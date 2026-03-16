@@ -251,6 +251,28 @@ export async function createOrder(userId: string, params: CreateOrderParams): Pr
 }
 
 /**
+ * 결제 상태 업데이트 (PG 연동 시 결제 완료/실패/환불 콜백·웹훅에서 호출)
+ * 서버/Edge Function 또는 신뢰된 클라이언트에서만 호출할 것.
+ */
+export async function updateOrderPaymentStatus(
+  orderId: string,
+  updates: { payment_status: 'pending' | 'paid' | 'failed' | 'refunded'; paid_at?: string | null }
+): Promise<void> {
+  const body: Record<string, unknown> = {
+    payment_status: updates.payment_status,
+    updated_at: new Date().toISOString(),
+  };
+  if (updates.paid_at !== undefined) body.paid_at = updates.paid_at;
+  if (updates.payment_status === 'paid' && body.paid_at === undefined) body.paid_at = new Date().toISOString();
+
+  const { error } = await getSupabase().from('orders').update(body).eq('id', orderId);
+  if (error) {
+    console.error('updateOrderPaymentStatus error', error);
+    throw error;
+  }
+}
+
+/**
  * 내 주문 목록
  */
 export async function getMyOrders(userId: string): Promise<OrderRecord[]> {

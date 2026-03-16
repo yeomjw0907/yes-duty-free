@@ -69,7 +69,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
     }
   }, [displayProduct.id, maxQuantity, quantity, displayProduct.isUnlimitedStock]);
 
-  const relatedProducts = products.filter(p => p.category === displayProduct.category && p.id !== displayProduct.id).slice(0, 4);
+  const relatedProducts = products.filter((p) => p.categoryId === displayProduct.categoryId && p.id !== displayProduct.id).slice(0, 4);
   const bestProducts = products.slice(0, 4);
 
   const { t, i18n } = useTranslation();
@@ -113,7 +113,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, products, onBack
             {user ? (
               <button
                 type="button"
-                aria-label={isInWishlist ? '찜 해제' : '찜하기'}
+                aria-label={isInWishlist ? t('product.wishlistRemoveTitle') : t('product.wishlistAddTitle')}
                 onClick={() => (isInWishlist ? setConfirmWishlistRemove(displayProduct) : toggleWishlist(displayProduct.id))}
                 disabled={wishlistToggling}
                 className={`shrink-0 p-2.5 rounded-full border-2 transition-colors ${isInWishlist ? 'bg-red-50 border-red-200 text-red-600' : 'border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}

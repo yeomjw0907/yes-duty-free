@@ -195,7 +195,7 @@ export async function getAdminProducts(opts?: {
 }
 
 /**
- * 관리자용: 상품 등록
+ * 관리자용: 상품 등록 (products + product_locales ko/zh-TW 반영)
  */
 export async function createAdminProduct(p: AdminProductCreate): Promise<AdminProductRow> {
   const row: Record<string, unknown> = {
@@ -221,11 +221,44 @@ export async function createAdminProduct(p: AdminProductCreate): Promise<AdminPr
     console.error('createAdminProduct error:', error);
     throw error;
   }
-  return data as AdminProductRow;
+  const created = data as AdminProductRow;
+  await getSupabase()
+    .from('product_locales')
+    .insert({
+      product_id: created.id,
+      locale: 'ko',
+      name: created.name,
+      description: created.description ?? null,
+      detail_html: created.detail_html ?? null,
+      price_twd: null,
+    })
+    .then(({ error: e }) => {
+      if (e) console.error('createAdminProduct product_locales ko error:', e);
+    });
+  const nameZh = p.name_zh ?? created.name_zh;
+  if (nameZh != null && String(nameZh).trim() !== '') {
+    await getSupabase()
+      .from('product_locales')
+      .upsert(
+        {
+          product_id: created.id,
+          locale: 'zh-TW',
+          name: nameZh,
+          description: p.description_zh ?? created.description_zh ?? null,
+          detail_html: p.detail_html_zh ?? created.detail_html_zh ?? null,
+          price_twd: p.price_twd ?? created.price_twd ?? null,
+        },
+        { onConflict: 'product_id,locale' }
+      )
+      .then(({ error: e }) => {
+        if (e) console.error('createAdminProduct product_locales zh-TW error:', e);
+      });
+  }
+  return created;
 }
 
 /**
- * 관리자용: 상품 수정
+ * 관리자용: 상품 수정 (products + product_locales ko/zh-TW 반영)
  */
 export async function updateAdminProduct(id: string, p: AdminProductUpdate): Promise<void> {
   const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -250,6 +283,55 @@ export async function updateAdminProduct(id: string, p: AdminProductUpdate): Pro
   if (error) {
     console.error('updateAdminProduct error:', error);
     throw error;
+  }
+  const localeFields = ['name', 'description', 'detail_html', 'name_zh', 'description_zh', 'detail_html_zh', 'price_twd'];
+  if (Object.keys(p).some((k) => localeFields.includes(k))) {
+    if (p.name !== undefined || p.description !== undefined || p.detail_html !== undefined) {
+      const { data: existingKo } = await getSupabase()
+        .from('product_locales')
+        .select('name, description, detail_html')
+        .eq('product_id', id)
+        .eq('locale', 'ko')
+        .maybeSingle();
+      const cur = existingKo as { name: string; description: string | null; detail_html: string | null } | null;
+      const payloadKo = {
+        product_id: id,
+        locale: 'ko',
+        name: p.name ?? cur?.name ?? '',
+        description: p.description !== undefined ? p.description : cur?.description ?? null,
+        detail_html: p.detail_html !== undefined ? p.detail_html : cur?.detail_html ?? null,
+        price_twd: null,
+      };
+      await getSupabase().from('product_locales').upsert(payloadKo, { onConflict: 'product_id,locale' });
+    }
+    if (
+      p.name_zh !== undefined ||
+      p.description_zh !== undefined ||
+      p.detail_html_zh !== undefined ||
+      p.price_twd !== undefined
+    ) {
+      const { data: existingZh } = await getSupabase()
+        .from('product_locales')
+        .select('name, description, detail_html, price_twd')
+        .eq('product_id', id)
+        .eq('locale', 'zh-TW')
+        .maybeSingle();
+      const cur = existingZh as {
+        name: string;
+        description: string | null;
+        detail_html: string | null;
+        price_twd: number | null;
+      } | null;
+      const payloadZh = {
+        product_id: id,
+        locale: 'zh-TW',
+        name: p.name_zh ?? cur?.name ?? '',
+        description: p.description_zh !== undefined ? p.description_zh : cur?.description ?? null,
+        detail_html: p.detail_html_zh !== undefined ? p.detail_html_zh : cur?.detail_html ?? null,
+        price_twd: p.price_twd !== undefined ? p.price_twd : cur?.price_twd ?? null,
+      };
+      await getSupabase().from('product_locales').upsert(payloadZh, { onConflict: 'product_id,locale' });
+    }
   }
 }
 

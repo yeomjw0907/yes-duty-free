@@ -33,6 +33,8 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
+  getEventLocales,
+  upsertEventLocale,
   type EventInsert,
 } from '../lib/api/events';
 import {
@@ -47,6 +49,8 @@ import {
   createBanner,
   updateBanner,
   deleteBanner,
+  getBannerLocales,
+  upsertBannerLocale,
   type BannerInsert,
 } from '../lib/api/banners';
 import { getSearchKeywords, getSalesTrend, type DailyTrendRow } from '../lib/api/insights';
@@ -149,6 +153,8 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [eventsList, setEventsList] = useState<EventRow[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventModal, setEventModal] = useState<'add' | { type: 'edit'; event: EventRow } | null>(null);
+  const [eventEditLocale, setEventEditLocale] = useState<'ko' | 'zh-TW' | 'en'>('ko');
+  const [eventLocalesData, setEventLocalesData] = useState<Record<string, { title: string; content?: string; content_html?: string | null; popup_image_url?: string | null; link_url?: string | null }>>({});
   const [eventForm, setEventForm] = useState<{
     title: string;
     content: string;
@@ -210,6 +216,8 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [bannersList, setBannersList] = useState<BannerRow[]>([]);
   const [bannersLoading, setBannersLoading] = useState(false);
   const [bannerModal, setBannerModal] = useState<'add' | { type: 'edit'; row: BannerRow } | null>(null);
+  const [bannerEditLocale, setBannerEditLocale] = useState<'ko' | 'zh-TW' | 'en'>('ko');
+  const [bannerLocalesData, setBannerLocalesData] = useState<Record<string, { title: string; subtitle?: string | null; description?: string | null; tag_text?: string | null; image_url: string; mobile_image_url?: string | null; link_url?: string | null }>>({});
   const [bannerForm, setBannerForm] = useState<{
     title: string;
     subtitle: string | null;
@@ -506,6 +514,8 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const openEditEvent = (ev: EventRow) => {
+    setEventEditLocale('ko');
+    setEventLocalesData({});
     setEventForm({
       title: ev.title,
       content: ev.content ?? '',
@@ -519,6 +529,13 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       is_active: ev.is_active ?? true,
     });
     setEventModal({ type: 'edit', event: ev });
+    getEventLocales(ev.id).then((locales) => {
+      const data: Record<string, { title: string; content?: string; content_html?: string | null; popup_image_url?: string | null; link_url?: string | null }> = {};
+      for (const l of locales) {
+        data[l.locale] = { title: l.title, content: l.content ?? '', content_html: l.content_html ?? null, popup_image_url: l.popup_image_url ?? null, link_url: l.link_url ?? null };
+      }
+      setEventLocalesData(data);
+    }).catch(() => {});
   };
 
   const handleEventImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -541,22 +558,26 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const id = eventModal?.type === 'edit' ? eventModal.event.id : null;
     setSavingEventId(id ?? 'new');
     try {
-      const payload: EventInsert = {
-        title: eventForm.title.trim(),
-        content: eventForm.content || undefined,
+      const groupPayload = {
         type: eventForm.type,
-        popup_image_url: eventForm.popup_image_url || null,
-        link_url: eventForm.link_url?.trim() || null,
         is_popup: eventForm.is_popup,
         starts_at: eventForm.starts_at ? new Date(eventForm.starts_at).toISOString() : null,
         ends_at: eventForm.ends_at ? new Date(eventForm.ends_at).toISOString() : null,
         display_order: eventForm.display_order,
         is_active: eventForm.is_active,
       };
+      const localePayload = {
+        title: eventForm.title.trim(),
+        content: eventForm.content || '',
+        content_html: null,
+        popup_image_url: eventForm.popup_image_url || null,
+        link_url: eventForm.link_url?.trim() || null,
+      };
       if (eventModal === 'add') {
-        await createEvent(payload);
+        await createEvent({ ...groupPayload, ...localePayload });
       } else if (id) {
-        await updateEvent(id, payload);
+        await updateEvent(id, groupPayload);
+        await upsertEventLocale(id, eventEditLocale, localePayload);
       }
       setEventModal(null);
       await fetchEvents();
@@ -680,6 +701,8 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const openEditBanner = (row: BannerRow) => {
+    setBannerEditLocale('ko');
+    setBannerLocalesData({});
     setBannerForm({
       title: row.title,
       subtitle: row.subtitle ?? null,
@@ -694,6 +717,13 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       is_active: row.is_active ?? true,
     });
     setBannerModal({ type: 'edit', row });
+    getBannerLocales(row.id).then((locales) => {
+      const data: Record<string, { title: string; subtitle?: string | null; description?: string | null; tag_text?: string | null; image_url: string; mobile_image_url?: string | null; link_url?: string | null }> = {};
+      for (const l of locales) {
+        data[l.locale] = { title: l.title, subtitle: l.subtitle ?? null, description: l.description ?? null, tag_text: l.tag_text ?? null, image_url: l.image_url, mobile_image_url: l.mobile_image_url ?? null, link_url: l.link_url ?? null };
+      }
+      setBannerLocalesData(data);
+    }).catch(() => {});
   };
 
   const handleBannerImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -716,23 +746,27 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const id = bannerModal?.type === 'edit' ? bannerModal.row.id : null;
     setSavingBannerId(id ?? 'new');
     try {
-      const payload: BannerInsert = {
-        title: bannerForm.title.trim(),
-        subtitle: bannerForm.subtitle?.trim() || null,
-        description: bannerForm.description?.trim() || null,
-        image_url: bannerForm.image_url,
-        link_url: bannerForm.link_url?.trim() || null,
+      const groupPayload = {
         position: bannerForm.position,
         display_order: bannerForm.display_order,
         valid_from: bannerForm.valid_from ? new Date(bannerForm.valid_from).toISOString() : null,
         valid_until: bannerForm.valid_until ? new Date(bannerForm.valid_until).toISOString() : null,
-        tag_text: bannerForm.tag_text?.trim() || null,
         is_active: bannerForm.is_active,
       };
+      const localePayload = {
+        title: bannerForm.title.trim(),
+        subtitle: bannerForm.subtitle?.trim() || null,
+        description: bannerForm.description?.trim() || null,
+        tag_text: bannerForm.tag_text?.trim() || null,
+        image_url: bannerForm.image_url,
+        mobile_image_url: bannerForm.mobile_image_url ?? null,
+        link_url: bannerForm.link_url?.trim() || null,
+      };
       if (bannerModal === 'add') {
-        await createBanner(payload);
+        await createBanner({ ...groupPayload, ...localePayload });
       } else if (id) {
-        await updateBanner(id, payload);
+        await updateBanner(id, groupPayload);
+        await upsertBannerLocale(id, bannerEditLocale, localePayload);
       }
       setBannerModal(null);
       await fetchBanners();
@@ -2188,6 +2222,28 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setEventModal(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-black text-gray-900 mb-4">{eventModal === 'add' ? '공지/이벤트 등록' : '공지/이벤트 수정'}</h3>
+            {eventModal !== 'add' && (
+              <div className="flex gap-2 mb-4 border-b border-gray-100 pb-3">
+                {(['ko', 'zh-TW', 'en'] as const).map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => {
+                      setEventEditLocale(loc);
+                      const data = eventLocalesData[loc];
+                      if (data) {
+                        setEventForm((prev) => ({ ...prev, title: data.title, content: data.content ?? '', popup_image_url: data.popup_image_url ?? null, link_url: data.link_url ?? null }));
+                      } else {
+                        setEventForm((prev) => ({ ...prev, title: '', content: '', popup_image_url: prev.popup_image_url, link_url: null }));
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold ${eventEditLocale === loc ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {loc === 'ko' ? '한국어' : loc === 'zh-TW' ? '繁體中文' : 'English'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">유형</label>
@@ -2566,6 +2622,28 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setBannerModal(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-black text-gray-900 mb-4">{bannerModal === 'add' ? '배너 등록' : '배너 수정'}</h3>
+            {bannerModal !== 'add' && (
+              <div className="flex gap-2 mb-4 border-b border-gray-100 pb-3">
+                {(['ko', 'zh-TW', 'en'] as const).map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => {
+                      setBannerEditLocale(loc);
+                      const data = bannerLocalesData[loc];
+                      if (data) {
+                        setBannerForm((prev) => ({ ...prev, title: data.title, subtitle: data.subtitle ?? null, description: data.description ?? null, tag_text: data.tag_text ?? null, image_url: data.image_url, link_url: data.link_url ?? null }));
+                      } else {
+                        setBannerForm((prev) => ({ ...prev, title: '', subtitle: null, description: null, tag_text: null, image_url: prev.image_url || '', link_url: null }));
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold ${bannerEditLocale === loc ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    {loc === 'ko' ? '한국어' : loc === 'zh-TW' ? '繁體中文' : 'English'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase mb-1">제목</label>

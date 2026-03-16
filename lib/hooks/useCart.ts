@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   getOrCreateCart,
   getCartItems,
@@ -13,6 +14,7 @@ const CART_QUERY_KEY = 'cart';
 
 export function useCart(userId: string | undefined) {
   const queryClient = useQueryClient();
+  const locale = useTranslation().i18n.language;
   const enabled = !!userId;
 
   const cartQuery = useQuery({
@@ -25,8 +27,8 @@ export function useCart(userId: string | undefined) {
   const cartId = cartQuery.data?.id;
 
   const itemsQuery = useQuery({
-    queryKey: [CART_QUERY_KEY, 'items', cartId],
-    queryFn: () => getCartItems(cartId!),
+    queryKey: [CART_QUERY_KEY, 'items', cartId, locale],
+    queryFn: () => getCartItems(cartId!, locale),
     enabled: !!cartId,
     staleTime: 1000 * 60,
   });

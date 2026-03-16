@@ -57,23 +57,31 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
   const [loading, setLoading] = useState(false);
 
   const isKorea = formData.country === 'KR';
+  const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
 
-  const openAddressSearch = () => {
+  const openAddressSearch = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAddressSearchError(null);
     if (typeof window === 'undefined' || !window.daum?.Postcode) {
-      alert(t('signup.addressScriptLoading'));
+      setAddressSearchError(t('signup.addressSearchUnavailable'));
       return;
     }
-    new window.daum.Postcode({
-      oncomplete(data: DaumPostcodeData) {
-        setFormData((prev) => ({
-          ...prev,
-          postal_code: data.zonecode,
-          address_line1: data.roadAddress || data.address || '',
-          state_province: data.sido ?? prev.state_province,
-          city: data.sigungu || data.bname || prev.city || '대한민국',
-        }));
-      },
-    }).open();
+    try {
+      new window.daum.Postcode({
+        oncomplete(data: DaumPostcodeData) {
+          setFormData((prev) => ({
+            ...prev,
+            postal_code: data.zonecode,
+            address_line1: data.roadAddress || data.address || '',
+            state_province: data.sido ?? prev.state_province,
+            city: data.sigungu || data.bname || prev.city || '대한민국',
+          }));
+        },
+      }).open();
+    } catch {
+      setAddressSearchError(t('signup.addressSearchUnavailable'));
+    }
   };
 
   const fullPhone =
@@ -194,7 +202,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
               >
                 {PHONE_COUNTRY_OPTIONS.map((opt) => (
                   <option key={opt.value || 'other'} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </option>
                 ))}
               </select>
@@ -223,7 +231,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                 >
                   {COUNTRY_OPTIONS.map((opt) => (
                     <option key={opt.value || 'select'} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -249,6 +257,9 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                         {t('signup.addressSearch')}
                       </button>
                     </div>
+                    {addressSearchError && (
+                      <p className="text-xs text-amber-600 mt-1">{addressSearchError}</p>
+                    )}
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-gray-500 mb-1">{t('signup.addressLine1')}</span>
@@ -281,7 +292,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                         type="text"
                         value={formData.postal_code}
                         onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                        placeholder="ZIP"
+                        placeholder={t('signup.zipPlaceholder')}
                         className="w-full px-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
                       />
                     </div>
@@ -291,7 +302,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                         type="text"
                         value={formData.state_province}
                         onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
-                        placeholder="State"
+                        placeholder={t('signup.statePlaceholder')}
                         className="w-full px-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
                       />
                     </div>
@@ -302,7 +313,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                         type="text"
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="City"
+                        placeholder={t('signup.cityPlaceholder')}
                         className="w-full px-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
                       />
                     </div>
@@ -314,7 +325,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                       type="text"
                       value={formData.address_line1}
                       onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
-                      placeholder="Street address, building"
+                      placeholder={t('signup.streetPlaceholder')}
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
                     />
                   </div>
@@ -324,7 +335,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
                       type="text"
                       value={formData.address_line2}
                       onChange={(e) => setFormData({ ...formData, address_line2: e.target.value })}
-                      placeholder="Apt, Suite, Floor (선택)"
+                      placeholder={t('signup.aptPlaceholder')}
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
                     />
                   </div>
@@ -356,15 +367,15 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSwitchToLogin, onSignupSucces
         </form>
 
         <div className="mt-10 space-y-4">
-          <p className="text-center text-xs text-gray-400 font-bold uppercase tracking-widest">SNS 계정으로 간편 시작하기</p>
+          <p className="text-center text-xs text-gray-400 font-bold uppercase tracking-widest">{t('signup.snsStart')}</p>
           <div className="flex justify-center gap-6">
-            <button className="w-12 h-12 rounded-full bg-[#06C755] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity" title="LINE으로 가입">
+            <button className="w-12 h-12 rounded-full bg-[#06C755] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity" title={t('signup.signupWithLine')}>
               <span className="text-white text-[10px] font-black tracking-tighter">LINE</span>
             </button>
-            <button className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity" title="Facebook으로 가입">
+            <button className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity" title={t('signup.signupWithFacebook')}>
               <span className="text-white text-[18px] font-black">f</span>
             </button>
-            <button className="w-12 h-12 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors" title="Google으로 가입">
+            <button className="w-12 h-12 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors" title={t('signup.signupWithGoogle')}>
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

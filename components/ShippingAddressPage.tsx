@@ -69,24 +69,32 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isKorea = form.country === 'KR';
+  const [addressSearchError, setAddressSearchError] = useState<string | null>(null);
 
   /** 한국 주소 검색 (다음 우편번호 API) */
-  const openAddressSearch = () => {
+  const openAddressSearch = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAddressSearchError(null);
     if (typeof window === 'undefined' || !window.daum?.Postcode) {
-      alert(t('address.scriptLoading'));
+      setAddressSearchError(t('address.addressSearchUnavailable'));
       return;
     }
-    new window.daum.Postcode({
-      oncomplete(data: DaumPostcodeData) {
-        setForm((prev) => ({
-          ...prev,
-          postal_code: data.zonecode,
-          address_line1: data.roadAddress || data.address || '',
-          state_province: data.sido ?? prev.state_province,
-          city: data.sigungu || data.bname || prev.city || '대한민국',
-        }));
-      },
-    }).open();
+    try {
+      new window.daum.Postcode({
+        oncomplete(data: DaumPostcodeData) {
+          setForm((prev) => ({
+            ...prev,
+            postal_code: data.zonecode,
+            address_line1: data.roadAddress || data.address || '',
+            state_province: data.sido ?? prev.state_province,
+            city: data.sigungu || data.bname || prev.city || '대한민국',
+          }));
+        },
+      }).open();
+    } catch {
+      setAddressSearchError(t('address.addressSearchUnavailable'));
+    }
   };
 
   const resetForm = () => {
@@ -282,7 +290,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
             >
               {COUNTRY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </select>
@@ -296,7 +304,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                 type="text"
                 value={form.recipient_name}
                 onChange={(e) => setForm({ ...form, recipient_name: e.target.value })}
-                placeholder="Full name"
+                placeholder={t('address.placeholderFullName')}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
               />
             </div>
@@ -307,7 +315,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+1 234 567 8900"
+                placeholder={t('address.placeholderPhone')}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
               />
             </div>
@@ -334,6 +342,9 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                     {t('address.addressSearch')}
                   </button>
                 </div>
+                {addressSearchError && (
+                  <p className="text-xs text-amber-600 mt-1">{addressSearchError}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">{t('address.addressLine1')} *</label>
@@ -366,7 +377,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                     type="text"
                     value={form.postal_code}
                     onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
-                    placeholder="Optional"
+                    placeholder={t('address.placeholderOptional')}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
                   />
                 </div>
@@ -376,7 +387,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                     type="text"
                     value={form.state_province}
                     onChange={(e) => setForm({ ...form, state_province: e.target.value })}
-                    placeholder="e.g. CA, Tokyo"
+                    placeholder={t('address.placeholderStateExample')}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
                   />
                 </div>
@@ -387,7 +398,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                     type="text"
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="City"
+                    placeholder={t('address.placeholderCity')}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
                   />
                 </div>
@@ -401,7 +412,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                   type="text"
                   value={form.address_line1}
                   onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
-                  placeholder="Street address, building name"
+                  placeholder={t('address.placeholderStreet')}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
                 />
               </div>
@@ -413,7 +424,7 @@ const ShippingAddressPage: React.FC<ShippingAddressPageProps> = ({
                   type="text"
                   value={form.address_line2}
                   onChange={(e) => setForm({ ...form, address_line2: e.target.value })}
-                  placeholder="Apt, Suite, Unit, Building, Floor (optional)"
+                  placeholder={t('address.placeholderApt')}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
                 />
               </div>

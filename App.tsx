@@ -41,7 +41,8 @@ import { useTranslation } from 'react-i18next';
 import { Product, CartItem, Coupon, Order, LiveStream } from './types';
 
 const App: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const [showIntro, setShowIntro] = useState(() =>
     typeof window !== 'undefined' && !localStorage.getItem(INTRO_STORAGE_KEY)
   );
@@ -106,7 +107,6 @@ const App: React.FC = () => {
   const { order: selectedOrderDetail, isLoading: orderDetailLoading } = useOrderDetail(selectedOrderId, user?.id);
   const { wishlist } = useWishlist(user?.id);
   const { toggle: toggleWishlist, isToggling: wishlistToggling } = useToggleWishlist(user?.id);
-  const categoryNames = categories.map((c) => c.name);
 
   const wishlistPropsFor = (p: Product) =>
     user
@@ -223,7 +223,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentPage !== 'home') return;
     if (isPopupDismissedToday()) return;
-    getPopupEvents()
+    getPopupEvents(locale)
       .then((list) => {
         if (list.length > 0) {
           setPopupEvents(list);
@@ -232,7 +232,7 @@ const App: React.FC = () => {
         }
       })
       .catch(() => {});
-  }, [currentPage]);
+  }, [currentPage, locale]);
 
   // 라이브 방송 목록 (메인 섹션 + 라이브 페이지)
   useEffect(() => {
@@ -244,23 +244,23 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentPage === 'notices') {
       setBoardEventsLoading(true);
-      getEvents({ type: 'notice' }).then(setBoardEventsList).finally(() => setBoardEventsLoading(false));
+      getEvents({ type: 'notice', locale }).then(setBoardEventsList).finally(() => setBoardEventsLoading(false));
     } else if (currentPage === 'events') {
       setBoardEventsLoading(true);
-      getEvents({ type: 'event' }).then(setBoardEventsList).finally(() => setBoardEventsLoading(false));
+      getEvents({ type: 'event', locale }).then(setBoardEventsList).finally(() => setBoardEventsLoading(false));
     }
-  }, [currentPage]);
+  }, [currentPage, locale]);
 
   // 공지/이벤트 상세
   useEffect(() => {
     if ((currentPage === 'notice-detail' || currentPage === 'event-detail') && activeCategory) {
       setBoardEventDetail(null);
       setBoardEventDetailLoading(true);
-      getEventById(activeCategory).then((ev) => {
+      getEventById(activeCategory, locale).then((ev) => {
         setBoardEventDetail(ev ?? null);
       }).finally(() => setBoardEventDetailLoading(false));
     }
-  }, [currentPage, activeCategory]);
+  }, [currentPage, activeCategory, locale]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,10 +505,10 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-20">
           <h2 className="text-3xl font-black mb-12">{t('category.all')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {categoryNames.map(cat => (
-              <div key={cat} onClick={() => navigateToPage('category', cat as string)} className="p-10 bg-white border border-gray-100 rounded-[2rem] flex flex-col items-center gap-4 cursor-pointer hover:border-red-500 hover:shadow-xl transition-all group">
+            {categories.map((c) => (
+              <div key={c.id} onClick={() => navigateToPage('category', c.id)} className="p-10 bg-white border border-gray-100 rounded-[2rem] flex flex-col items-center gap-4 cursor-pointer hover:border-red-500 hover:shadow-xl transition-all group">
                 <span className="text-4xl group-hover:scale-110 transition-transform">📦</span>
-                <span className="font-black text-lg">{cat}</span>
+                <span className="font-black text-lg">{c.name}</span>
               </div>
             ))}
           </div>
@@ -519,13 +519,13 @@ const App: React.FC = () => {
           <div className="bg-white pt-10 pb-16">
              <div className="max-w-7xl mx-auto px-6 text-center">
                 <p className="text-xs font-black text-red-600 uppercase tracking-widest mb-4 italic">Duty Free Collection</p>
-                <h2 className="text-5xl font-black text-gray-900 tracking-tighter">{activeCategory}</h2>
+                <h2 className="text-5xl font-black text-gray-900 tracking-tighter">{categories.find((c) => c.id === activeCategory)?.name ?? activeCategory}</h2>
              </div>
           </div>
           <div className="max-w-7xl mx-auto px-4 lg:px-6 py-12">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {products
-                .filter(p => p.category === activeCategory)
+                .filter((p) => p.categoryId === activeCategory)
                 .map(p => (
                   <div key={p.id} onClick={() => handleProductClick(p)}>
                     <ProductCard product={p} wishlist={wishlistPropsFor(p)} />

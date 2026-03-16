@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { TIER_LABELS, TIER_RATES, TIER_THRESHOLDS, SHIPPING_FEE_BASIC } from '../lib/constants/membership';
 import type { MembershipTier } from '../lib/constants/membership';
 
@@ -22,6 +23,7 @@ const TIER_BENEFITS: Record<MembershipTier, { desc: string; perks: string[] }> =
 };
 
 const TierBenefitsModal: React.FC<TierBenefitsModalProps> = ({ onClose }) => {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -34,7 +36,7 @@ const TierBenefitsModal: React.FC<TierBenefitsModalProps> = ({ onClose }) => {
             type="button"
             onClick={onClose}
             className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-            aria-label="닫기"
+            aria-label={t('actions.close')}
           >
             ×
           </button>

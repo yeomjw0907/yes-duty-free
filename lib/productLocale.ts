@@ -1,14 +1,12 @@
 import type { Product } from '../types';
 
-/** 현재 언어에 맞는 상품명 (대만어 있으면 zh-TW에서 사용, 없으면 기본) */
-export function getProductDisplayName(product: Product, lang: string): string {
-  if (lang === 'zh-TW' && product.nameZh?.trim()) return product.nameZh.trim();
-  return product.name;
+/** 현재 언어에 맞는 상품명. API가 locale 적용해 반환하므로 product.name 사용 (호환용 유지) */
+export function getProductDisplayName(product: Product, _lang?: string): string {
+  return product.name?.trim() ?? '';
 }
 
-/** 현재 언어에 맞는 상품 상세 HTML */
-export function getProductDisplayDetailHtml(product: Product, lang: string): string | null | undefined {
-  if (lang === 'zh-TW' && product.detailHtmlZh?.trim()) return product.detailHtmlZh.trim();
+/** 현재 언어에 맞는 상품 상세 HTML. API가 locale 적용해 반환하므로 product.detailHtml 사용 */
+export function getProductDisplayDetailHtml(product: Product, _lang?: string): string | null | undefined {
   return product.detailHtml;
 }
 

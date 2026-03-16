@@ -44,7 +44,6 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
   const isLiveMode = currentPage === 'live';
 
   const { categories } = useCategories();
-  const categoryNames = categories.map((c) => c.name);
 
   const bottomNavItems = [
     { id: 'all_categories', labelKey: 'nav.category', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /> },
@@ -149,7 +148,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               <div className="lg:col-span-4 min-w-0">
                 <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest italic mb-6 lg:mb-8">{t('search.trendingTitle')}</h3>
                 <div className="space-y-5 lg:space-y-6">
-                  {(trendingKeywords.length > 0 ? trendingKeywords : ['설화수 자음생 세트', '에어팟 프로 최저가', '조말론 블랙베리', '정관장 에브리타임', '위스키 오픈런 혜택']).map((keyword, idx) => (
+                  {(trendingKeywords.length > 0 ? trendingKeywords : [t('search.trending1'), t('search.trending2'), t('search.trending3'), t('search.trending4'), t('search.trending5')]).map((keyword, idx) => (
                     <div
                       key={`${keyword}-${idx}`}
                       className="flex items-center justify-between gap-3 group cursor-pointer min-w-0"
@@ -173,7 +172,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               </div>
 
               <div className="lg:col-span-8 min-w-0">
-                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest italic mb-6 lg:mb-8">Real-time Popular</h3>
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest italic mb-6 lg:mb-8">{t('search.realtimePopular')}</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 min-w-0">
                   {(productsLoading ? [] : products.slice(0, 4)).map((product) => (
                     <div 
@@ -219,42 +218,42 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                 <span className={`font-black text-base lg:text-xl tracking-tighter uppercase italic ${isLiveMode ? 'text-white' : 'text-[#E52D27]'}`}>Yes Duty Free</span>
               </div>
               <nav className={`hidden lg:flex gap-10 text-[15px] font-black uppercase tracking-tight ${isLiveMode ? 'text-white/70' : 'text-gray-800'}`}>
-                <button onClick={() => setCurrentPage('deals')} className="hover:text-red-600 transition-colors">Special Offers</button>
-                <button onClick={() => setCurrentPage('best')} className="hover:text-red-600 transition-colors">Best Sellers</button>
-                <button onClick={() => setCurrentPage('live')} className="hover:text-red-600 transition-colors">Live TV</button>
+                <button onClick={() => setCurrentPage('deals')} className="hover:text-red-600 transition-colors">{t('nav.deals')}</button>
+                <button onClick={() => setCurrentPage('best')} className="hover:text-red-600 transition-colors">{t('nav.best')}</button>
+                <button onClick={() => setCurrentPage('live')} className="hover:text-red-600 transition-colors">{t('nav.live')}</button>
               </nav>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="relative hidden lg:block">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="relative">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsLangOpen((v) => !v);
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                  className={`px-2.5 py-1.5 lg:px-3 lg:py-2 rounded-lg lg:rounded-xl text-[10px] lg:text-xs font-black border transition-colors ${
                     isLiveMode
                       ? 'border-white/20 text-white/80 hover:text-white hover:bg-white/10'
                       : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                   }`}
-                  aria-label="언어"
+                  aria-label={t('aria.language')}
                 >
-                  {i18n.language === 'zh-TW' ? '繁體中文' : 'KO'}
+                  {i18n.language === 'zh-TW' ? '繁' : 'KO'}
                 </button>
                 {isLangOpen && (
-                  <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-[210]">
                     <button
                       type="button"
-                      onClick={() => i18n.changeLanguage('ko')}
-                      className="w-full px-4 py-3 text-left text-sm font-bold hover:bg-gray-50"
+                      onClick={() => { i18n.changeLanguage('ko'); setIsLangOpen(false); }}
+                      className="w-full px-4 py-3 text-left text-sm font-bold text-gray-900 hover:bg-gray-50"
                     >
                       {t('lang.ko')}
                     </button>
                     <button
                       type="button"
-                      onClick={() => i18n.changeLanguage('zh-TW')}
-                      className="w-full px-4 py-3 text-left text-sm font-bold hover:bg-gray-50"
+                      onClick={() => { i18n.changeLanguage('zh-TW'); setIsLangOpen(false); }}
+                      className="w-full px-4 py-3 text-left text-sm font-bold text-gray-900 hover:bg-gray-50"
                     >
                       {t('lang.zhTW')}
                     </button>
@@ -264,7 +263,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               <button 
                 onClick={() => setCurrentPage('cart')}
                 className={`relative p-2.5 rounded-full transition-all ${isLiveMode ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
-                aria-label="장바구니"
+                aria-label={t('aria.cart')}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 11-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                 {cartItemCount > 0 && (
@@ -279,33 +278,30 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               </button>
-              <div className="hidden lg:flex items-center gap-6">
+              <div className="flex items-center gap-2 lg:gap-6">
                 {!authLoading && user ? (
-                  <>
-                    <button onClick={() => setCurrentPage('mypage')} className={`flex items-center gap-2 text-xs font-black tracking-widest uppercase ${isLiveMode ? 'text-white/40 hover:text-white' : 'text-gray-300 hover:text-gray-900'}`}>
-                      My Profile
-                      {profile && (
-                        <span className={`px-2 py-0.5 rounded text-[10px] ${profile.membership_tier === 'vip' ? 'bg-amber-100 text-amber-800' : profile.membership_tier === 'premium' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
-                          {tierLabel(profile.membership_tier)}
-                        </span>
-                      )}
+                  <div className={`flex items-center gap-1.5 lg:gap-2 text-[10px] lg:text-xs font-black ${isLiveMode ? 'text-white/80' : 'text-gray-700'}`}>
+                    <button onClick={() => setCurrentPage('mypage')} className="hover:underline truncate max-w-[80px] sm:max-w-[120px] lg:max-w-none">
+                      {profile?.name ?? user?.email?.split('@')[0] ?? t('header.myProfile')}
                     </button>
+                    <span className="opacity-50">|</span>
                     <button
                       onClick={() => onLogout?.().then(() => setCurrentPage('home'))}
-                      className={`px-8 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white/20 text-white hover:bg-red-600 border border-white/30' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 border border-gray-200'}`}
+                      className={`px-3 py-1.5 lg:px-6 lg:py-2.5 rounded-xl text-[10px] lg:text-sm font-black transition-all ${isLiveMode ? 'hover:bg-white/20 hover:text-white' : 'hover:bg-red-50 hover:text-red-600'}`}
                     >
                       {t('auth.logout')}
                     </button>
-                  </>
+                  </div>
                 ) : !authLoading ? (
-                  <>
-                    <button onClick={() => setCurrentPage('login')} className={`px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 border ${isLiveMode ? 'bg-transparent text-white border-white/40 hover:bg-white/20' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-red-600'}`}>
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <button onClick={() => setCurrentPage('login')} className={`px-3 py-1.5 lg:px-6 lg:py-3 rounded-xl text-[10px] lg:text-sm font-black border transition-all ${isLiveMode ? 'bg-transparent text-white border-white/40 hover:bg-white/20' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-red-600'}`}>
                       {t('auth.login')}
                     </button>
-                    <button onClick={() => setCurrentPage('signup')} className={`px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl active:scale-95 ${isLiveMode ? 'bg-white text-black hover:bg-red-600' : 'bg-gray-900 text-white hover:bg-red-600 hover:bg-red-700'}`}>
+                    <span className="opacity-50 text-[10px] lg:text-sm hidden sm:inline">|</span>
+                    <button onClick={() => setCurrentPage('signup')} className={`px-3 py-1.5 lg:px-6 lg:py-3 rounded-xl text-[10px] lg:text-sm font-black transition-all ${isLiveMode ? 'bg-white text-black hover:bg-red-600' : 'bg-gray-900 text-white hover:bg-red-600 hover:bg-red-700'}`}>
                       {t('auth.signup')}
                     </button>
-                  </>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -320,13 +316,13 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               >
                 {t('nav.viewAll')}
               </button>
-              {categoryNames.map(cat => (
+              {categories.map((c) => (
                 <button 
-                  key={cat} 
-                  onClick={() => setCurrentPage('category', cat)}
-                  className={`text-[13px] font-bold whitespace-nowrap transition-colors ${currentPage === 'category' && activeCategory === cat ? 'text-red-600' : 'text-gray-500 hover:text-gray-900'}`}
+                  key={c.id} 
+                  onClick={() => setCurrentPage('category', c.id)}
+                  className={`text-[13px] font-bold whitespace-nowrap transition-colors ${currentPage === 'category' && activeCategory === c.id ? 'text-red-600' : 'text-gray-500 hover:text-gray-900'}`}
                 >
-                  {cat}
+                  {c.name}
                 </button>
               ))}
             </div>
@@ -371,7 +367,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
               </div>
               <div className="lg:col-span-3 grid grid-cols-3 gap-10">
                 <div>
-                  <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">Customer Support</h4>
+                  <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">{t('footer.support')}</h4>
                   <ul className="text-sm space-y-4 font-medium text-gray-500">
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('notices'); }}>{t('footer.notices')}</li>
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => { setFooterModal(null); setCurrentPage('events'); }}>{t('footer.events')}</li>
@@ -380,7 +376,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">Global Logistics</h4>
+                  <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">{t('footer.logistics')}</h4>
                   <ul className="text-sm space-y-4 font-medium text-gray-500">
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setCurrentPage('mypage')}>{t('footer.delivery')}</li>
                     <li className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('customs')}>{t('footer.customs')}</li>
@@ -388,7 +384,7 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">Connect</h4>
+                  <h4 className="font-black mb-6 text-gray-400 text-xs uppercase tracking-widest">{t('footer.connect')}</h4>
                   <ul className="text-sm space-y-4 font-medium text-gray-500">
                     <li className="hover:text-white cursor-pointer transition-colors">Instagram</li>
                     <li className="hover:text-white cursor-pointer transition-colors">YouTube</li>
@@ -413,8 +409,8 @@ const Layout: React.FC<LayoutProps> = ({ children, setCurrentPage, currentPage, 
                 {onOpenAdminLogin && (
                   <span className="hover:text-white cursor-pointer transition-colors" onClick={onOpenAdminLogin}>{t('footer.admin')}</span>
                 )}
-                <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('terms')}>Terms of Service</span>
-                <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('privacy')}>Privacy Policy</span>
+                <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('terms')}>{t('footer.termsTitle')}</span>
+                <span className="hover:text-white cursor-pointer transition-colors" onClick={() => setFooterModal('privacy')}>{t('footer.privacyTitle')}</span>
               </div>
             </div>
           </div>

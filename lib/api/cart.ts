@@ -69,6 +69,7 @@ function mapCartItem(row: CartItemRow): CartItemWithProduct | null {
       price: p.price,
       originalPrice: p.original_price,
       imageUrl: p.image_url,
+      categoryId: p.category_id ?? undefined,
       category: categoryName,
       tags: [],
       soldCount: 0,
@@ -106,15 +107,18 @@ export async function getOrCreateCart(userId: string): Promise<{ id: string }> {
   return { id: created!.id };
 }
 
+const CART_FALLBACK_LOCALE = 'ko';
+
 /**
- * 장바구니 아이템 목록 조회 (상품 정보 포함)
+ * 장바구니 아이템 목록 조회 (상품 정보 포함). locale 없으면 'ko' (상품명 등 product_locales 반영).
  */
-export async function getCartItems(cartId: string): Promise<CartItemWithProduct[]> {
+export async function getCartItems(cartId: string, locale?: string): Promise<CartItemWithProduct[]> {
+  const loc = locale || CART_FALLBACK_LOCALE;
   const { data, error } = await getSupabase()
     .from('cart_items')
     .select(`
       id, cart_id, product_id, quantity, selected_options, price_snapshot,
-      products (id, name, brand, price, original_price, image_url, stock_quantity, is_unlimited_stock, name_zh, price_twd, categories(name))
+      products (id, name, brand, price, original_price, image_url, category_id, stock_quantity, is_unlimited_stock, name_zh, price_twd, categories(name))
     `)
     .eq('cart_id', cartId)
     .order('created_at', { ascending: false });
@@ -124,8 +128,33 @@ export async function getCartItems(cartId: string): Promise<CartItemWithProduct[
     throw error;
   }
 
-  const items = (data ?? [])
-    .map((row) => mapCartItem(row as unknown as CartItemRow))
+  const rows = (data ?? []) as unknown as CartItemRow[];
+  const productIds = [...new Set(rows.map((r) => r.product_id).filter(Boolean))];
+  const byProduct = new Map<string, { name: string; price_twd?: number | null }>();
+  if (productIds.length > 0) {
+    const { data: locData } = await getSupabase()
+      .from('product_locales')
+      .select('product_id, locale, name, price_twd')
+      .in('product_id', productIds)
+      .in('locale', [loc, CART_FALLBACK_LOCALE]);
+    const list = (locData ?? []) as { product_id: string; locale: string; name: string; price_twd?: number | null }[];
+    for (const r of list) {
+      const cur = byProduct.get(r.product_id);
+      if (!cur || r.locale === loc) byProduct.set(r.product_id, { name: r.name, price_twd: r.price_twd });
+    }
+  }
+  const items = rows
+    .map((row) => {
+      const item = mapCartItem(row);
+      if (item) {
+        const locRow = byProduct.get(row.product_id);
+        if (locRow) {
+          item.product.name = locRow.name;
+          item.product.priceTwd = locRow.price_twd ?? undefined;
+        }
+      }
+      return item;
+    })
     .filter((item): item is CartItemWithProduct => item !== null);
   return items;
 }

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import type { OrderWithItems } from '../lib/api/orders';
 import { getTrackingUrl } from '../lib/tracking';
@@ -16,6 +17,7 @@ const formatDate = (iso: string) => {
 };
 
 const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isLoading, onClose, orderId }) => {
+  const { t } = useTranslation();
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onEsc);
@@ -42,7 +44,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isLoading, o
             type="button"
             onClick={onClose}
             className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200"
-            aria-label="닫기"
+            aria-label={t('actions.close')}
           >
             ×
           </button>
@@ -56,7 +58,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isLoading, o
             <div className="py-12 text-center">
               <p className="text-gray-500 font-bold">주문 정보를 불러올 수 없습니다.</p>
               <button type="button" onClick={onClose} className="mt-4 px-4 py-2 bg-gray-100 rounded-xl font-bold text-gray-700 hover:bg-gray-200">
-                닫기
+                {t('actions.close')}
               </button>
             </div>
           ) : (
