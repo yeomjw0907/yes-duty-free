@@ -75,6 +75,16 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isLoading, o
             <span className="text-sm text-gray-500">상태</span>
             <span className="text-sm font-bold text-gray-900">{order.status}</span>
           </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-500">결제 상태</span>
+            <span className="text-sm font-bold text-gray-900">{order.payment_status}</span>
+          </div>
+          {order.paid_at && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">결제 일시</span>
+              <span className="text-sm font-medium text-gray-700">{formatDate(order.paid_at)}</span>
+            </div>
+          )}
           <div className="border-t border-gray-100 pt-4">
             <p className="text-xs font-bold text-gray-500 mb-2">주문 상품</p>
             <div className="space-y-3">

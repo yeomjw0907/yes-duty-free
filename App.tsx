@@ -34,6 +34,7 @@ import { useProfile } from './lib/hooks/useProfile';
 import { useOrders, useOrderDetail } from './lib/hooks/useOrders';
 import { useWishlist, useToggleWishlist } from './lib/hooks/useWishlist';
 import { createOrder } from './lib/api/orders';
+import { initPortonePayment } from './lib/api/portone';
 import { checkIsAdmin } from './lib/api/admin';
 import { claimCouponByCode } from './lib/api/coupons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -43,12 +44,20 @@ import { Product, CartItem, Coupon, Order, LiveStream } from './types';
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const [showIntro, setShowIntro] = useState(() =>
-    typeof window !== 'undefined' && !localStorage.getItem(INTRO_STORAGE_KEY)
-  );
+
+  const initialOrderNumberFromQuery = (() => {
+    if (typeof window === 'undefined') return null;
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get('order_number') || sp.get('orderNumber') || sp.get('merchant_order_ref');
+  })();
+
+  const [showIntro, setShowIntro] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !initialOrderNumberFromQuery && !localStorage.getItem(INTRO_STORAGE_KEY);
+  });
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(() => (initialOrderNumberFromQuery ? 'order_complete' : 'home'));
   const [activeCategory, setActiveCategory] = useState<string | undefined>(undefined);
   const [activeSubCategory, setActiveSubCategory] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,7 +67,7 @@ const App: React.FC = () => {
   
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQuantity, setCheckoutQuantity] = useState(1);
-  const [orderCompleteNumber, setOrderCompleteNumber] = useState<string | null>(null);
+  const [orderCompleteNumber, setOrderCompleteNumber] = useState<string | null>(initialOrderNumberFromQuery);
   const [showTierBenefitsModal, setShowTierBenefitsModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [confirmWishlistRemove, setConfirmWishlistRemove] = useState<Product | null>(null);
@@ -82,7 +91,7 @@ const App: React.FC = () => {
   const { products, isLoading: productsLoading } = useProducts();
   const { products: searchResults, isLoading: searchLoading } = useSearchProducts(searchQuery);
   const { categories } = useCategories();
-  const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
+  const { user, signIn, signUp, signOut, session, loading: authLoading } = useAuth();
   const {
     cartId,
     items: cartItems,
@@ -141,6 +150,19 @@ const App: React.FC = () => {
       claimCouponByCode(user.id, 'FIRSTORDER5000').catch(() => {});
     }
     setOrderCompleteNumber(order.order_number);
+
+    if (!session?.access_token) {
+      throw new Error('세션 토큰을 가져올 수 없습니다.');
+    }
+
+    const { payment_url } = await initPortonePayment({
+      orderId: order.id,
+      frontendBaseUrl: window.location.origin,
+      supabaseUserAccessToken: session.access_token,
+    });
+
+    // PortOne 결제 페이지로 이동 (성공/실패/대기 URL로 복귀)
+    window.location.href = payment_url;
   };
 
   const handleImmediatePurchase = async (product: Product, quantity: number, options?: Record<string, string>) => {
@@ -192,6 +214,16 @@ const App: React.FC = () => {
     setActiveCategory(category);
     setActiveSubCategory(subCategory);
     if (page !== 'search') setSearchQuery('');
+    if (typeof window !== 'undefined' && page !== 'order_complete') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('order_number');
+        url.searchParams.delete('payment_result');
+        window.history.replaceState({}, '', url.toString());
+      } catch {
+        // ignore
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -755,6 +787,7 @@ const App: React.FC = () => {
       {currentPage === 'order_complete' && (
         <OrderCompletePage
           orderNumber={orderCompleteNumber}
+          userId={user?.id ?? null}
           onNavigateToPage={(page) => {
             setOrderCompleteNumber(null);
             navigateToPage(page);

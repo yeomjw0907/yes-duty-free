@@ -166,7 +166,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     setSubmitting(true);
     try {
       await onCreateOrder(effectiveAddressId, undefined, appliedPoints, selectedUserCouponId ?? undefined);
-      onNavigateToPage('order_complete');
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : '주문 처리 중 오류가 발생했습니다.');

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMyOrders, getOrderById, type OrderRecord, type OrderWithItems } from '../api/orders';
+import { getMyOrders, getOrderById, getOrderByOrderNumber, type OrderRecord, type OrderWithItems } from '../api/orders';
 
 const ORDERS_QUERY_KEY = 'orders';
 
@@ -29,6 +29,22 @@ export function useOrderDetail(orderId: string | null, userId: string | undefine
   });
   return {
     order: query.data as OrderWithItems | null | undefined,
+    isLoading: query.isLoading,
+    refetch: query.refetch,
+  };
+}
+
+export function useOrderByOrderNumber(orderNumber: string | null, userId: string | undefined) {
+  const enabled = !!userId && !!orderNumber;
+  const query = useQuery({
+    queryKey: [ORDERS_QUERY_KEY, 'by_order_number', orderNumber, userId],
+    queryFn: () => getOrderByOrderNumber(orderNumber!, userId!),
+    enabled,
+    staleTime: 1000 * 10,
+  });
+
+  return {
+    order: query.data as OrderRecord | null | undefined,
     isLoading: query.isLoading,
     refetch: query.refetch,
   };

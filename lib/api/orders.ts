@@ -273,6 +273,26 @@ export async function updateOrderPaymentStatus(
 }
 
 /**
+ * 주문번호(order_number)로 내 주문 단건 조회
+ * - RLS 통과를 위해 user_id 조건을 포함
+ */
+export async function getOrderByOrderNumber(orderNumber: string, userId: string): Promise<OrderRecord | null> {
+  const { data, error } = await getSupabase()
+    .from('orders')
+    .select('*')
+    .eq('order_number', orderNumber)
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) {
+    console.error('getOrderByOrderNumber error:', error);
+    return null;
+  }
+
+  return (data ?? null) as OrderRecord | null;
+}
+
+/**
  * 내 주문 목록
  */
 export async function getMyOrders(userId: string): Promise<OrderRecord[]> {
